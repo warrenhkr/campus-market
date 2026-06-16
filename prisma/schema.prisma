@@ -1,0 +1,358 @@
+// schema.prisma - Campus Market
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- ENUMS ---
+
+enum UserRole {
+  USER
+  SELLER
+  ADMIN
+  @@map("user_role")
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  @@map("verification_status")
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  SHIPPED
+  DELIVERED
+  @@map("order_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+  @@map("payment_status")
+}
+
+enum ProductStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  HIDDEN
+  @@map("product_status")
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  @@map("support_ticket_status")
+}
+
+enum SupportTicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  @@map("support_ticket_priority")
+}
+
+enum SupportTicketCategory {
+  TECHNICAL
+  BILLING
+  ACCOUNT
+  DISPUTE
+  OTHER
+  @@map("support_ticket_category")
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+  @@map("report_status")
+}
+
+enum SystemAlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+  @@map("system_alert_severity")
+}
+
+// --- MODELS ---
+
+model User {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email      String   @unique
+  name       String?
+  avatar_url String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  role       UserRole @default(USER)
+
+  seller                    Seller?
+  orders                    Order[]
+  reviews                   Review[]
+  admin_logs                AdminLog[]
+  support_tickets_requested SupportTicket[]    @relation("TicketRequester")
+  support_tickets_assigned  SupportTicket[]    @relation("TicketAssignee")
+  support_ticket_replies    SupportTicketReply[]
+  reports_created           Report[]           @relation("ReportCreator")
+  reports_resolved          Report[]           @relation("ReportResolver")
+
+  @@map("users")
+}
+
+model Category {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name       String    @unique
+  slug       String    @unique
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  products   Product[]
+
+  @@map("categories")
+}
+
+model Seller {
+  id                      String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                 String             @unique @db.Uuid
+  shop_name               String             @unique
+  description             String?
+  verification_status     VerificationStatus @default(PENDING)
+  subscription_expires_at DateTime?          @db.Timestamptz(6)
+  created_at              DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime           @default(now()) @db.Timestamptz(6)
+
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  shops   Shop[]
+  reports Report[]
+
+  @@map("sellers")
+}
+
+model Shop {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  seller_id   String    @db.Uuid
+  name        String
+  slug        String    @unique
+  description String?
+  image_url   String?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  products    Product[]
+
+  seller Seller @relation(fields: [seller_id], references: [id], onDelete: Cascade)
+
+  @@map("shops")
+}
+
+model Product {
+  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shop_id      String        @db.Uuid
+  category_id  String?       @db.Uuid
+  name         String
+  description  String?
+  price        Decimal       @db.Decimal(10, 2)
+  image_url    String?
+  stock        Int           @default(0)
+  is_available Boolean       @default(true)
+  status       ProductStatus @default(APPROVED)
+  created_at   DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime      @default(now()) @db.Timestamptz(6)
+
+  order_items OrderItem[]
+  reviews     Review[]
+  reports     Report[]
+  shop        Shop      @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  category    Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+
+  @@map("products")
+}
+
+model Order {
+  id           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id      String      @db.Uuid
+  order_date   DateTime    @default(now()) @db.Timestamptz(6)
+  total_amount Decimal     @db.Decimal(10, 2)
+  status       OrderStatus @default(PENDING)
+  payment_id   String?     @unique @db.Uuid
+  created_at   DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime    @default(now()) @db.Timestamptz(6)
+
+  order_items OrderItem[]
+  payment     Payment?
+  user        User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_id   String   @db.Uuid
+  product_id String   @db.Uuid
+  quantity   Int
+  price      Decimal  @db.Decimal(10, 2)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  order   Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id             String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_id       String        @unique @db.Uuid
+  amount         Decimal       @db.Decimal(10, 2)
+  platform_fee   Decimal       @default(0.00) @db.Decimal(10, 2)
+  seller_earning Decimal       @db.Decimal(10, 2)
+  currency       String        @default("FCFA")
+  method         String        @default("FedaPay")
+  transaction_id String        @unique
+  status         PaymentStatus @default(PENDING)
+  paid_at        DateTime?     @db.Timestamptz(6)
+  created_at     DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime      @default(now()) @db.Timestamptz(6)
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Review {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  rating     Int
+  comment    String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([product_id, user_id])
+  @@map("reviews")
+}
+
+model Notification {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  type       String
+  title      String
+  message    String
+  metadata   Json     @default("{}")
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("notifications")
+}
+
+model AdminLog {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id       String?  @db.Uuid
+  action        String
+  resource_type String?
+  resource_id   String?  @db.Uuid
+  changes       Json     @default("{}")
+  metadata      Json     @default("{}")
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@map("admin_logs")
+}
+
+model SupportTicket {
+  id          String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id     String                @db.Uuid
+  subject     String
+  description String
+  status      SupportTicketStatus   @default(OPEN)
+  priority    SupportTicketPriority @default(MEDIUM)
+  category    SupportTicketCategory @default(OTHER)
+  assigned_to String?               @db.Uuid
+  created_at  DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime              @default(now()) @db.Timestamptz(6)
+  resolved_at DateTime?             @db.Timestamptz(6)
+
+  replies  SupportTicketReply[]
+  user     User  @relation("TicketRequester", fields: [user_id], references: [id], onDelete: Cascade)
+  assignee User? @relation("TicketAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+
+  @@map("support_tickets")
+}
+
+model SupportTicketReply {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  ticket_id   String   @db.Uuid
+  user_id     String   @db.Uuid
+  message     String
+  is_internal Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  ticket SupportTicket @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("support_ticket_replies")
+}
+
+model Report {
+  id          String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id     String       @db.Uuid
+  product_id  String?      @db.Uuid
+  seller_id   String?      @db.Uuid
+  reason      String
+  description String?
+  status      ReportStatus @default(PENDING)
+  resolved_by String?      @db.Uuid
+  resolution  String?
+  created_at  DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime     @default(now()) @db.Timestamptz(6)
+  resolved_at DateTime?    @db.Timestamptz(6)
+
+  reporter User     @relation("ReportCreator", fields: [user_id], references: [id], onDelete: Cascade)
+  product  Product? @relation(fields: [product_id], references: [id], onDelete: SetNull)
+  seller   Seller?  @relation(fields: [seller_id], references: [id], onDelete: SetNull)
+  admin    User?    @relation("ReportResolver", fields: [resolved_by], references: [id], onDelete: SetNull)
+
+  @@map("reports")
+}
+
+model SystemAlert {
+  id           String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  alert_type   String
+  severity     SystemAlertSeverity @default(INFO)
+  message      String
+  metadata     Json                @default("{}")
+  is_read      Boolean             @default(false)
+  dismissed_at DateTime?           @db.Timestamptz(6)
+  created_at   DateTime            @default(now()) @db.Timestamptz(6)
+
+  @@map("system_alerts")
+}
+
+model Setting {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  key         String   @unique
+  value       String
+  description String?
+  category    String
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("settings")
+}
