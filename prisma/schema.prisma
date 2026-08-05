@@ -26,6 +26,14 @@ enum VerificationStatus {
   @@map("verification_status")
 }
 
+enum SubscriptionPlan {
+  DECOUVERTE
+  STARTER
+  BUSINESS
+  PRO
+  @@map("subscription_plan")
+}
+
 enum OrderStatus {
   PENDING
   COMPLETED
@@ -96,17 +104,24 @@ enum SystemAlertSeverity {
 // --- MODELS ---
 
 model User {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  email      String   @unique
-  name       String?
-  avatar_url String?
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-  role       UserRole @default(USER)
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email              String   @unique
+  name               String?
+  avatar_url         String?
+  phone              String?
+  university         String?
+  etablissement_type String?  @default("public")
+  filiere            String?
+  account_type       String?  @default("student")
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @default(now()) @db.Timestamptz(6)
+  role               UserRole @default(USER)
 
   seller                    Seller?
   orders                    Order[]
   reviews                   Review[]
+  favorites                 Favorite[]
+  notifications             Notification[]
   admin_logs                AdminLog[]
   support_tickets_requested SupportTicket[]    @relation("TicketRequester")
   support_tickets_assigned  SupportTicket[]    @relation("TicketAssignee")
@@ -134,6 +149,7 @@ model Seller {
   shop_name               String             @unique
   description             String?
   verification_status     VerificationStatus @default(PENDING)
+  subscription_plan       SubscriptionPlan   @default(DECOUVERTE)
   subscription_expires_at DateTime?          @db.Timestamptz(6)
   created_at              DateTime           @default(now()) @db.Timestamptz(6)
   updated_at              DateTime           @default(now()) @db.Timestamptz(6)
@@ -178,10 +194,24 @@ model Product {
   order_items OrderItem[]
   reviews     Review[]
   reports     Report[]
+  favorites   Favorite[]
   shop        Shop      @relation(fields: [shop_id], references: [id], onDelete: Cascade)
   category    Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
 
   @@map("products")
+}
+
+model Favorite {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id])
+  @@map("favorites")
 }
 
 model Order {
@@ -251,12 +281,15 @@ model Review {
 
 model Notification {
   id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String?  @db.Uuid
   type       String
   title      String
   message    String
   metadata   Json     @default("{}")
   is_read    Boolean  @default(false)
   created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
@@ -355,4 +388,33 @@ model Setting {
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("settings")
+}
+
+model AdminOtpRateLimit {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email            String    @unique
+  request_count    Int       @default(0)
+  first_request_at DateTime  @default(now()) @db.Timestamptz(6)
+  failed_attempts  Int       @default(0)
+  blocked_until    DateTime? @db.Timestamptz(6)
+
+  @@map("admin_otp_rate_limits")
+}
+
+model AdminOtp {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email      String
+  code       String
+  expires_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("admin_otps")
+}
+
+model ProcessedWebhook {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  transaction_id String   @unique
+  processed_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("processed_webhooks")
 }
