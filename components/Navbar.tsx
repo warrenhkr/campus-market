@@ -8,9 +8,10 @@ import {
   ShoppingBag, Search, Menu, X, User, LogOut,
   LayoutDashboard, Package, Heart, ShoppingCart, Store,
 } from 'lucide-react'
+import { NotificationBell } from './NotificationBell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -129,7 +130,7 @@ export function Navbar() {
       className={cn(
         'sticky top-0 z-50 transition-all duration-300',
         scrolled
-          ? 'bg-[var(--background)]/90 backdrop-blur-xl border-b border-[var(--border)]'
+          ? 'bg-(--background)/90 backdrop-blur-xl border-b border-border'
           : 'bg-transparent border-b border-transparent'
       )}
     >
@@ -137,7 +138,7 @@ export function Navbar() {
         <div className="flex items-center h-16 gap-5">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: 'var(--primary)' }}>
               <ShoppingBag size={16} style={{ color: 'var(--primary-foreground)' }} />
@@ -178,8 +179,8 @@ export function Navbar() {
                       className={cn(
                         'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors',
                         pathname === href
-                          ? 'bg-[var(--primary-dim)] text-[var(--primary)]'
-                          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+                          ? 'bg-(--primary-dim) text-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-(--surface-2)'
                       )}
                     >
                       <Icon size={14} />
@@ -188,11 +189,12 @@ export function Navbar() {
                   ))}
 
                   <ThemeToggle />
+                  <NotificationBell/>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="ml-1 flex items-center gap-2 px-2 py-1.5 rounded-lg
-                        hover:bg-[var(--surface-2)] transition-colors">
+                        hover:bg-(--surface-2) transition-colors">
                         <Avatar className="w-7 h-7">
                           <AvatarFallback className="text-xs font-bold"
                             style={{
@@ -202,7 +204,7 @@ export function Navbar() {
                             {initials}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs max-w-[100px] truncate"
+                        <span className="text-xs max-w-25 truncate"
                           style={{ color: 'var(--muted-foreground)' }}>
                           {firstName}
                         </span>
@@ -282,6 +284,7 @@ export function Navbar() {
                   border: '1px solid var(--border)',
                 }}>
                 <SheetTitle className="sr-only">Menu de navigation</SheetTitle>
+                <SheetDescription className="sr-only">Navigation mobile pour Campus Market</SheetDescription>
                 <div className="flex flex-col h-full">
                   <div className="flex items-center justify-between px-5 py-4"
                     style={{ borderBottom: '1px solid var(--border)' }}>
@@ -323,8 +326,8 @@ export function Navbar() {
                               className={cn(
                                 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-colors',
                                 pathname === href
-                                  ? 'bg-[var(--primary-dim)] text-[var(--primary)]'
-                                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+                                  ? 'bg-(--primary-dim) text-primary'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-(--surface-2)'
                               )}
                             >
                               <Icon size={16} />

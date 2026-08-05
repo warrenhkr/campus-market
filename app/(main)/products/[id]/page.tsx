@@ -5,11 +5,12 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
+import { AddToCartButton } from '@/components/AddToCartButton'
+import { FavoriteButton } from '@/components/FavoriteButton'
 import {
   ArrowLeft, Store, Package, Star,
-  ShoppingCart, Heart, Share2, CheckCircle,
+  ShoppingCart, Share2, CheckCircle,
 } from 'lucide-react'
-import { AddToCartButton } from '@/components/AddToCartButton'
 
 async function getProduct(id: string) {
   try {
@@ -119,7 +120,6 @@ export default async function ProductDetailPage({
               </div>
             )}
 
-            {/* Status badge */}
             {product.stock <= 5 && product.stock > 0 && (
               <div
                 className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold"
@@ -143,7 +143,6 @@ export default async function ProductDetailPage({
         <AnimatedSection delay={0.15} direction="right">
           <div className="flex flex-col h-full">
 
-            {/* Category */}
             {product.category && (
               <Link
                 href={`/products?category=${product.category.id}`}
@@ -160,7 +159,6 @@ export default async function ProductDetailPage({
               </Link>
             )}
 
-            {/* Title */}
             <h1
               className="text-2xl md:text-3xl font-extrabold mb-3"
               style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}
@@ -168,7 +166,6 @@ export default async function ProductDetailPage({
               {product.name}
             </h1>
 
-            {/* Rating */}
             {product.reviews.length > 0 && (
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center gap-0.5">
@@ -187,7 +184,6 @@ export default async function ProductDetailPage({
               </div>
             )}
 
-            {/* Price */}
             <div className="mb-6">
               <p
                 className="text-4xl font-extrabold"
@@ -201,7 +197,6 @@ export default async function ProductDetailPage({
               </p>
             </div>
 
-            {/* Description */}
             {product.description && (
               <div className="mb-6">
                 <p className="text-sm leading-relaxed"
@@ -211,7 +206,6 @@ export default async function ProductDetailPage({
               </div>
             )}
 
-            {/* Stock info */}
             <div className="flex items-center gap-2 mb-6">
               <CheckCircle size={14} style={{
                 color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
@@ -227,44 +221,38 @@ export default async function ProductDetailPage({
             </div>
 
             {/* Actions */}
-<div className="flex gap-3 mb-8">
-  {user ? (
-    <AddToCartButton
-      product={{
-        id: product.id,
-        name: product.name,
-        price: Number(product.price),
-        image_url: product.image_url,
-        stock: product.stock,
-        shop_name: product.shop?.name ?? '',
-        shop_slug: product.shop?.slug ?? '',
-      }}
-    />
-  ) : (
-    <Link
-      href="/login"
-      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl
-        text-sm font-bold transition-all hover:scale-105"
-      style={{
-        background: 'var(--primary)',
-        color: 'var(--primary-foreground)',
-      }}
-    >
-      <ShoppingCart size={16} />
-      Se connecter pour acheter
-    </Link>
-  )}
-  <button
-                className="w-12 h-12 flex items-center justify-center rounded-xl transition-all
-                  hover:scale-105 active:scale-95"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--muted-foreground)',
-                }}
-              >
-                <Heart size={18} />
-              </button>
+            <div className="flex gap-3 mb-8">
+              {user ? (
+                <AddToCartButton
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    price: Number(product.price),
+                    image_url: product.image_url,
+                    stock: product.stock,
+                    shop_name: product.shop?.name ?? '',
+                    shop_slug: product.shop?.slug ?? '',
+                  }}
+                />
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl
+                    text-sm font-bold transition-all hover:scale-105"
+                  style={{
+                    background: 'var(--primary)',
+                    color: 'var(--primary-foreground)',
+                  }}
+                >
+                  <ShoppingCart size={16} />
+                  Se connecter pour acheter
+                </Link>
+              )}
+
+              <FavoriteButton
+                productId={product.id}
+                className="w-12 h-12 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
+              />
 
               <button
                 className="w-12 h-12 flex items-center justify-center rounded-xl transition-all

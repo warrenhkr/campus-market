@@ -1,0 +1,166 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { Bell } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { createClient } from '@/lib/supabase/client'
+
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
+
+function timeAgo(date: string): string {
+  const diff = Date.now() - new Date(date).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return "À l'instant"
+  if (minutes < 60) return `il y a ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `il y a ${hours}h`
+  return new Date(date).toLocaleDateString('fr-FR')
+}
+
+export function NotificationBell() {
+  const [open, setOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .or(`user_id.eq.${user.id},user_id.is.null`)
+        .order('created_at', { ascending: false })
+        .limit(8)
+
+      if (data) {
+        setNotifications(data)
+        setUnreadCount(data.filter(n => !n.is_read).length)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  if (loading || notifications.length === 0 && unreadCount === 0) {
+    // On garde quand même la cloche visible même sans notifs, juste sans badge
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+      >
+        <Bell size={16} style={{ color: 'var(--foreground)' }} />
+        {unreadCount > 0 && (
+          <span
+            className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full
+              flex items-center justify-center text-[10px] font-bold"
+            style={{ background: '#F87171', color: 'white' }}
+          >
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-11 z-30 w-80 rounded-2xl overflow-hidden"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
+              <div className="flex items-center justify-between px-4 py-3"
+                style={{ borderBottom: '1px solid var(--border)' }}>
+                <p className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>
+                  Notifications
+                </p>
+                {unreadCount > 0 && (
+                  <span
+                    className="px-1.5 py-0.5 text-[10px] font-bold rounded-full"
+                    style={{ background: '#F8717118', color: '#F87171' }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length > 0 ? (
+                  notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex gap-3 px-4 py-3 transition-colors"
+                      style={{
+                        background: notif.is_read ? 'transparent' : 'var(--primary-dim)',
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                    >
+                      <div
+                        className="mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: notif.is_read ? 'var(--subtle)' : 'var(--primary)' }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold truncate"
+                          style={{ color: 'var(--foreground)' }}>
+                          {notif.title}
+                        </p>
+                        <p className="text-xs mt-0.5 line-clamp-2"
+                          style={{ color: 'var(--muted-foreground)' }}>
+                          {notif.message}
+                        </p>
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--subtle)' }}>
+                          {timeAgo(notif.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-10 text-center">
+                    <Bell size={24} className="mx-auto mb-2" style={{ color: 'var(--subtle)' }} />
+                    <p className="text-xs" style={{ color: 'var(--subtle)' }}>
+                      Aucune notification
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {notifications.length > 0 && (
+                <Link
+                  href="/account/notifications"
+                  onClick={() => setOpen(false)}
+                  className="block text-center text-xs font-semibold py-3 transition-colors"
+                  style={{ color: 'var(--primary)', borderTop: '1px solid var(--border)' }}
+                >
+                  Voir toutes les notifications →
+                </Link>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

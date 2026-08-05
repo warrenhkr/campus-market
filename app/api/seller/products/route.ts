@@ -34,6 +34,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Aucune boutique trouvée.' }, { status: 404 })
     }
 
+    // --- Subscription limits check ---
+    const plan = seller.subscription_plan || 'DECOUVERTE'
+    if (plan !== 'BUSINESS' && plan !== 'PRO') {
+      const activeProductsCount = await prisma.product.count({
+        where: {
+          shop_id: shop.id,
+          status: { in: ['APPROVED', 'PENDING_REVIEW'] }
+        }
+      })
+
+      const limit = plan === 'STARTER' ? 10 : 3
+      if (activeProductsCount >= limit) {
+        return NextResponse.json(
+          { error: `Limite de produits atteinte pour votre plan actuel (${plan}), passez à un plan supérieur ou désactivez un produit existant.` },
+          { status: 403 }
+        )
+      }
+    }
+    // ---------------------------------
+
     const product = await prisma.product.create({
       data: {
         shop_id: shop.id,

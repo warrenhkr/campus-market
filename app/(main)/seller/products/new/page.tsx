@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -31,14 +31,15 @@ export default function NewProductPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
   // Charge les catégories
-  useState(() => {
+  useEffect(() => {
     const load = async () => {
       const supabase = createClient()
       const { data } = await supabase.from('categories').select('id, name').order('name')
       if (data) setCategories(data)
     }
+
     load()
-  })
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

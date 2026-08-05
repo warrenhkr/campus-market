@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         description: `Commande Campus Market #${order.id.slice(0, 8).toUpperCase()}`,
         amount: total,
         currency: { iso: 'XOF' },
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/fedapay`,
+        callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/api/webhook/fedapay`,
         customer: {
           firstname: fullName.split(' ')[0],
           lastname: fullName.split(' ').slice(1).join(' ') || fullName,

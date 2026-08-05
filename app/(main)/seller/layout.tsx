@@ -2,13 +2,16 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { LayoutDashboard, Package, ShoppingCart, Store } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, Store, CreditCard, TrendingUp, Star } from 'lucide-react'
 
 const NAV = [
   { href: '/seller',          label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/seller/products', label: 'Produits',    icon: Package },
   { href: '/seller/orders',   label: 'Commandes',   icon: ShoppingCart },
   { href: '/seller/shop',     label: 'Ma boutique', icon: Store },
+  { href: '/seller/subscription', label: 'Abonnement',  icon: CreditCard },
+  { href: '/seller/earnings',     label: 'Gains',        icon: TrendingUp },
+  { href: '/seller/reviews',      label: 'Avis reçus',   icon: Star },
 ]
 
 export default async function SellerLayout({ children }: { children: React.ReactNode }) {
