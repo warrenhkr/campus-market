@@ -11,6 +11,7 @@ import { OnboardingForm } from '@/components/OnboardingForm'
  * 2. Utilisateur avec university ET filiere déjà en DB (ancien register)
  *    → marque onboarding_complete dans Supabase metadata + redirect /
  * 3. Sinon → affiche le formulaire OnboardingForm (client component)
+ * 4. Si la requête Prisma échoue → affiche le formulaire quand même (fallback sûr)
  */
 export default async function OnboardingPage() {
   const supabase = await createClient()
@@ -22,24 +23,31 @@ export default async function OnboardingPage() {
     redirect('/login')
   }
 
-  // Vérification en DB : l'utilisateur a-t-il déjà renseigné ses infos ?
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { university: true, filiere: true },
-  })
-
-  const alreadyFilled =
-    dbUser?.university && dbUser.university.trim() !== '' &&
-    dbUser?.filiere   && dbUser.filiere.trim()   !== ''
-
-  if (alreadyFilled) {
-    // Marque silencieusement onboarding_complete → proxy ne le redirigera plus
-    await supabase.auth.updateUser({
-      data: { onboarding_complete: true },
+  // Vérifie si l'utilisateur a déjà renseigné ses infos via l'ancien register.
+  // En cas d'erreur Prisma (connexion, client pas généré, etc.), on affiche
+  // le formulaire plutôt que de crasher avec un 500.
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { university: true, filiere: true },
     })
-    redirect('/')
+
+    const alreadyFilled =
+      dbUser?.university && dbUser.university.trim() !== '' &&
+      dbUser?.filiere   && dbUser.filiere.trim()   !== ''
+
+    if (alreadyFilled) {
+      // Marque silencieusement onboarding_complete → proxy ne le redirigera plus
+      await supabase.auth.updateUser({
+        data: { onboarding_complete: true },
+      })
+      redirect('/')
+    }
+  } catch (err) {
+    console.error('[onboarding] Prisma query failed, showing form as fallback:', err)
+    // On continue vers le formulaire ci-dessous
   }
 
-  // Sinon : affiche le formulaire (typiquement les utilisateurs Google)
+  // Affiche le formulaire (utilisateurs Google ou fallback si erreur Prisma)
   return <OnboardingForm />
 }
