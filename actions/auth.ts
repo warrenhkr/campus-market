@@ -71,25 +71,37 @@ export async function saveOnboarding(formData: FormData) {
   }
 
   try {
-    // 1. Met à jour la DB via Prisma
-    await prisma.user.update({
+    // Utilise upsert : les utilisateurs Google n'ont pas de ligne dans
+    // public.users (seul register() en crée une), donc update planterait
+    // avec "Record to update not found".
+    await prisma.user.upsert({
       where: { id: user.id },
-      data: {
+      update: {
+        university,
+        faculty: faculty || null,
+        filiere,
+      },
+      create: {
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
         university,
         faculty: faculty || null,
         filiere,
       },
     })
 
-    // 2. Marque onboarding_complete dans les user_metadata Supabase
-    //    → lu par proxy.ts sans appel DB (depuis le JWT)
+    // Marque onboarding_complete dans les user_metadata Supabase
+    // → lu par proxy.ts sans appel DB (depuis le JWT)
     await supabase.auth.updateUser({
       data: { onboarding_complete: true },
     })
 
     return { success: true }
-  } catch (err) {
-    console.error('saveOnboarding error:', err)
+  } catch (err: unknown) {
+    // Log détaillé pour Vercel — l'objet complet, pas juste .message
+    console.error('[saveOnboarding] error:', err instanceof Error ? err.stack : JSON.stringify(err, null, 2))
     return { success: false, error: 'Erreur lors de la sauvegarde.' }
   }
 }
