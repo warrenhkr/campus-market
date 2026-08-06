@@ -50,11 +50,33 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/account'
+    // Si onboarding pas encore complété, envoie directement sur /onboarding
+    url.pathname = user.user_metadata?.onboarding_complete === true ? '/account' : '/onboarding'
     return redirectWithCookies(url)
   }
 
+  // ── Onboarding obligatoire ──────────────────────────────────────────────
+  // Si l'utilisateur est connecté mais n'a pas complété son onboarding,
+  // on le redirige vers /onboarding (sauf s'il y est déjà ou sur API/auth).
+  if (user) {
+    const pathname = request.nextUrl.pathname
+    const isOnboardingExempt =
+      pathname === '/onboarding' ||
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/auth/')
+
+    const onboardingComplete =
+      user.user_metadata?.onboarding_complete === true
+
+    if (!onboardingComplete && !isOnboardingExempt) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return redirectWithCookies(url)
+    }
+  }
+
   return supabaseResponse
+
 }
 
 export const config = {

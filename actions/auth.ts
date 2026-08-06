@@ -56,3 +56,40 @@ export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
 }
+
+export async function saveOnboarding(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Non authentifié.' }
+
+  const university = formData.get('university') as string
+  const faculty    = formData.get('faculty') as string
+  const filiere    = formData.get('filiere') as string
+
+  if (!university || !filiere) {
+    return { success: false, error: 'Tous les champs sont requis.' }
+  }
+
+  try {
+    // 1. Met à jour la DB via Prisma
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        university,
+        faculty: faculty || null,
+        filiere,
+      },
+    })
+
+    // 2. Marque onboarding_complete dans les user_metadata Supabase
+    //    → lu par proxy.ts sans appel DB (depuis le JWT)
+    await supabase.auth.updateUser({
+      data: { onboarding_complete: true },
+    })
+
+    return { success: true }
+  } catch (err) {
+    console.error('saveOnboarding error:', err)
+    return { success: false, error: 'Erreur lors de la sauvegarde.' }
+  }
+}

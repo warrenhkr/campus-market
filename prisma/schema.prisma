@@ -110,6 +110,7 @@ model User {
   avatar_url         String?
   phone              String?
   university         String?
+  faculty            String?
   etablissement_type String?  @default("public")
   filiere            String?
   account_type       String?  @default("student")
