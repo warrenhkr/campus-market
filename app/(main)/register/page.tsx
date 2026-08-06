@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { register } from '@/actions/auth'
 import { toast } from 'sonner'
+import { GoogleLoginButton } from '@/components/GoogleLoginButton'
 
 const UNIVERSITES_PUBLIQUES: Record<string, string[]> = {
   'UAC — Université d\'Abomey-Calavi': [
@@ -333,6 +334,16 @@ export default function RegisterPage() {
               {isPending ? 'Création en cours...' : 'Créer mon compte'}
             </Button>
           </form>
+
+          <div className="my-6 flex items-center justify-center gap-4">
+            <div className="h-px flex-1 bg-[var(--border)]" />
+            <span className="text-xs text-[var(--muted-foreground)] uppercase font-semibold">
+              Ou
+            </span>
+            <div className="h-px flex-1 bg-[var(--border)]" />
+          </div>
+
+          <GoogleLoginButton />
 
           <p className="text-center text-sm mt-6" style={{ color: 'var(--muted-foreground)' }}>
             Déjà un compte ?{' '}

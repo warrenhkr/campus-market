@@ -37,6 +37,7 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       }
 
       localStorage.setItem(CART_KEY, JSON.stringify(cart))
+      window.dispatchEvent(new Event('cart_updated'))
       setAdded(true)
       toast.success('Ajouté au panier ✅')
       setTimeout(() => setAdded(false), 2000)

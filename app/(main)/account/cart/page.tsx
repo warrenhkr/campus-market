@@ -32,6 +32,7 @@ function getCart(): CartItem[] {
 
 function saveCart(items: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(items))
+  window.dispatchEvent(new Event('cart_updated'))
 }
 
 export function useCart() {
