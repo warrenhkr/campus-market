@@ -35,7 +35,7 @@ function saveCart(items: CartItem[]) {
   window.dispatchEvent(new Event('cart_updated'))
 }
 
-export function useCart() {
+function useCart() {
   const [items, setItems] = useState<CartItem[]>([])
 
   useEffect(() => {

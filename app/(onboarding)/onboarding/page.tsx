@@ -43,7 +43,10 @@ export default async function OnboardingPage() {
       })
       redirect('/')
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+      throw err
+    }
     console.error('[onboarding] Prisma query failed, showing form as fallback:', err)
     // On continue vers le formulaire ci-dessous
   }

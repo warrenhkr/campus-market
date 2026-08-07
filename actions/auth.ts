@@ -27,7 +27,7 @@ export async function register(formData: FormData) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name } },
+    options: { data: { name, onboarding_complete: true } },
   })
 
   if (error) return { success: false, error: error.message }
@@ -78,7 +78,7 @@ export async function saveOnboarding(formData: FormData) {
       where: { id: user.id },
       update: {
         university,
-        faculty: faculty || null,
+        faculty: faculty || '',
         filiere,
       },
       create: {
@@ -87,7 +87,7 @@ export async function saveOnboarding(formData: FormData) {
         name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
         avatar_url: user.user_metadata?.avatar_url ?? null,
         university,
-        faculty: faculty || null,
+        faculty: faculty || '',
         filiere,
       },
     })
@@ -99,9 +99,13 @@ export async function saveOnboarding(formData: FormData) {
     })
 
     return { success: true }
-  } catch (err: unknown) {
-    // Log détaillé pour Vercel — l'objet complet, pas juste .message
-    console.error('[saveOnboarding] error:', err instanceof Error ? err.stack : JSON.stringify(err, null, 2))
-    return { success: false, error: 'Erreur lors de la sauvegarde.' }
+  } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+      throw err
+    }
+    // Logs détaillés pour Vercel/console
+    console.error('[saveOnboarding] Prisma/Supabase error exact:', err instanceof Error ? err.stack : err)
+    console.error('[saveOnboarding] Full error object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2))
+    return { success: false, error: 'Erreur lors de la sauvegarde. Veuillez réessayer.' }
   }
 }

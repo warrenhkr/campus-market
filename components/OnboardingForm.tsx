@@ -7,6 +7,7 @@ import { GraduationCap, ChevronDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { saveOnboarding } from '@/actions/auth'
 import { ETABLISSEMENTS_BENIN } from '@/lib/data/etablissements-benin'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // Constantes dérivées pour les types
 type Universite = (typeof ETABLISSEMENTS_BENIN)[number]
@@ -169,23 +170,19 @@ export function OnboardingForm() {
               <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Université
               </label>
-              <div className="relative">
-                <select
-                  value={selectedUni}
-                  onChange={e => handleUniChange(e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="">Sélectionne ton université</option>
+              <Select
+                value={selectedUni}
+                onValueChange={handleUniChange}
+              >
+                <SelectTrigger className="w-full h-11 bg-[var(--surface-2)] border-[var(--border)] rounded-xl text-sm shadow-none focus:ring-2 focus:ring-primary/20">
+                  <SelectValue placeholder="Sélectionne ton université" />
+                </SelectTrigger>
+                <SelectContent>
                   {ETABLISSEMENTS_BENIN.map(u => (
-                    <option key={u.universite} value={u.universite}>{u.universite}</option>
+                    <SelectItem key={u.universite} value={u.universite}>{u.universite}</SelectItem>
                   ))}
-                </select>
-                <ChevronDown
-                  size={15}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: 'var(--muted-foreground)' }}
-                />
-              </div>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* ─ Faculté / École ─ */}
@@ -202,24 +199,20 @@ export function OnboardingForm() {
                   <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                     Faculté / École
                   </label>
-                  <div className="relative">
-                    <select
-                      value={selectedFac}
-                      onChange={e => handleFacChange(e.target.value)}
-                      disabled={!selectedUni}
-                      style={selectedUni ? selectStyle : disabledSelectStyle}
-                    >
-                      <option value="">Sélectionne ta faculté</option>
+                  <Select
+                    value={selectedFac}
+                    onValueChange={handleFacChange}
+                    disabled={!selectedUni}
+                  >
+                    <SelectTrigger className="w-full h-11 bg-[var(--surface-2)] border-[var(--border)] rounded-xl text-sm shadow-none focus:ring-2 focus:ring-primary/20">
+                      <SelectValue placeholder="Sélectionne ta faculté" />
+                    </SelectTrigger>
+                    <SelectContent>
                       {universiteData?.facultes.map(f => (
-                        <option key={f.nom} value={f.nom}>{f.nom}</option>
+                        <SelectItem key={f.nom} value={f.nom}>{f.nom}</SelectItem>
                       ))}
-                    </select>
-                    <ChevronDown
-                      size={15}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ color: 'var(--muted-foreground)' }}
-                    />
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -248,24 +241,20 @@ export function OnboardingForm() {
                       style={inputStyle}
                     />
                   ) : (
-                    <div className="relative">
-                      <select
-                        value={selectedFil}
-                        onChange={e => setSelectedFil(e.target.value)}
-                        disabled={!selectedFac}
-                        style={selectedFac ? selectStyle : disabledSelectStyle}
-                      >
-                        <option value="">Sélectionne ta filière</option>
+                    <Select
+                      value={selectedFil}
+                      onValueChange={setSelectedFil}
+                      disabled={!selectedFac}
+                    >
+                      <SelectTrigger className="w-full h-11 bg-[var(--surface-2)] border-[var(--border)] rounded-xl text-sm shadow-none focus:ring-2 focus:ring-primary/20">
+                        <SelectValue placeholder="Sélectionne ta filière" />
+                      </SelectTrigger>
+                      <SelectContent>
                         {filieres.map(f => (
-                          <option key={f} value={f}>{f}</option>
+                          <SelectItem key={f} value={f}>{f}</SelectItem>
                         ))}
-                      </select>
-                      <ChevronDown
-                        size={15}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                        style={{ color: 'var(--muted-foreground)' }}
-                      />
-                    </div>
+                      </SelectContent>
+                    </Select>
                   )}
                 </motion.div>
               )}

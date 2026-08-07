@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text()
     const signature = req.headers.get('x-fedapay-signature')
-    const secret = process.env.FEDAPAY_SECRET_KEY
+    const secret = process.env.FEDAPAY_WEBHOOK_SECRET
 
     if (!secret || !signature) {
       console.error('Missing secret or signature')

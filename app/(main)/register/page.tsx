@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { register } from '@/actions/auth'
 import { toast } from 'sonner'
 import { GoogleLoginButton } from '@/components/GoogleLoginButton'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const UNIVERSITES_PUBLIQUES: Record<string, string[]> = {
   'UAC — Université d\'Abomey-Calavi': [
@@ -121,70 +122,65 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8"
       style={{ background: 'var(--background)' }}>
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96
-        rounded-full blur-[120px] opacity-10 pointer-events-none"
-        style={{ background: 'var(--primary)' }} />
-
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-md relative"
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-[440px] relative"
       >
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+        <div className="flex flex-col items-center justify-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-md flex items-center justify-center"
             style={{ background: 'var(--primary)' }}>
-            <ShoppingBag size={18} style={{ color: 'var(--primary-foreground)' }} />
+            <ShoppingBag size={20} style={{ color: 'var(--primary-foreground)' }} />
           </div>
-          <span className="font-bold text-lg" style={{ color: 'var(--foreground)' }}>
+          <span className="font-semibold text-xl tracking-tight" style={{ color: 'var(--foreground)' }}>
             Campus Market
           </span>
         </div>
 
-        <div className="rounded-2xl p-8"
+        <div className="rounded-xl p-6 sm:p-8 shadow-sm"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>
+          <h1 className="text-2xl font-semibold tracking-tight mb-1.5" style={{ color: 'var(--foreground)' }}>
             Créer un compte
           </h1>
           <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
             Rejoins la marketplace de ton campus 🎓
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Nom complet */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Nom complet
               </label>
-              <Input name="name" type="text" placeholder="John Doe" required className="h-10"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+              <Input name="name" type="text" required className="h-11 rounded-md"
+                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
             </div>
 
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Email
               </label>
-              <Input name="email" type="email" placeholder="toi@email.com" required className="h-10"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+              <Input name="email" type="email" required className="h-11 rounded-md"
+                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
             </div>
 
             {/* Téléphone */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Téléphone WhatsApp
               </label>
-              <Input name="phone" type="tel" placeholder="+229 XX XX XX XX" required className="h-10"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+              <Input name="phone" type="tel" required className="h-11 rounded-md"
+                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
             </div>
 
             {/* Type d'établissement */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Type d&apos;établissement
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -197,9 +193,9 @@ export default function RegisterPage() {
                       setEtablissementType(value as 'public' | 'private')
                       setSelectedUniversity('')
                     }}
-                    className="py-2.5 px-3 rounded-xl text-sm font-medium transition-all"
+                    className="py-2.5 px-3 rounded-md text-sm font-medium transition-colors"
                     style={{
-                      background: etablissementType === value ? 'var(--primary-dim)' : 'var(--surface-2)',
+                      background: etablissementType === value ? 'var(--primary-dim)' : 'transparent',
                       border: `1px solid ${etablissementType === value ? 'var(--primary)' : 'var(--border)'}`,
                       color: etablissementType === value ? 'var(--primary)' : 'var(--muted-foreground)',
                     }}>
@@ -211,50 +207,52 @@ export default function RegisterPage() {
 
             {/* Université */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Université
               </label>
               {etablissementType === 'public' ? (
-                <select
+                <Select
                   name="university"
                   required
                   value={selectedUniversity}
-                  onChange={(e) => setSelectedUniversity(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl outline-none h-10"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}>
-                  <option value="">Sélectionne ton université</option>
-                  {Object.keys(UNIVERSITES_PUBLIQUES).map((uni) => (
-                    <option key={uni} value={uni}>{uni}</option>
-                  ))}
-                </select>
+                  onValueChange={(value) => setSelectedUniversity(value)}>
+                  <SelectTrigger className="w-full h-11 bg-transparent border-border rounded-md text-sm transition-all shadow-none">
+                    <SelectValue placeholder="Sélectionne ton université" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(UNIVERSITES_PUBLIQUES).map((uni) => (
+                      <SelectItem key={uni} value={uni}>{uni}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
-                <Input name="university" type="text" placeholder="Nom de ton université privée" required className="h-10"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+                <Input name="university" type="text" required className="h-11 rounded-md"
+                  style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
               )}
             </div>
 
             {/* Filière */}
             {etablissementType === 'public' && faculties.length > 0 && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                   Filière / École
                 </label>
-                <select
-                  name="filiere"
-                  required
-                  className="w-full px-3 py-2.5 text-sm rounded-xl outline-none h-10"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}>
-                  <option value="">Sélectionne ta filière</option>
-                  {faculties.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
+                <Select name="filiere" required>
+                  <SelectTrigger className="w-full h-11 bg-transparent border-border rounded-md text-sm transition-all shadow-none">
+                    <SelectValue placeholder="Sélectionne ta filière" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faculties.map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
             {/* Type de compte */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Tu veux
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -264,13 +262,13 @@ export default function RegisterPage() {
                 ].map(({ value, label, icon: Icon }) => (
                   <button key={value} type="button"
                     onClick={() => setAccountType(value as 'student' | 'seller')}
-                    className="py-2.5 px-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+                    className="py-2.5 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     style={{
-                      background: accountType === value ? 'var(--primary-dim)' : 'var(--surface-2)',
+                      background: accountType === value ? 'var(--primary-dim)' : 'transparent',
                       border: `1px solid ${accountType === value ? 'var(--primary)' : 'var(--border)'}`,
                       color: accountType === value ? 'var(--primary)' : 'var(--muted-foreground)',
                     }}>
-                    <Icon size={15} />
+                    <Icon size={16} />
                     {label}
                   </button>
                 ))}
@@ -279,14 +277,14 @@ export default function RegisterPage() {
 
             {/* Mot de passe */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Mot de passe
               </label>
               <div className="relative">
                 <Input name="password" type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••" required className="h-10 pr-10"
+                  required className="h-11 pr-10 rounded-md"
                   value={password} onChange={(e) => setPassword(e.target.value)}
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+                  style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
                   style={{ color: 'var(--muted-foreground)' }}>
@@ -294,10 +292,10 @@ export default function RegisterPage() {
                 </button>
               </div>
               {password.length > 0 && (
-                <div className="space-y-1 pt-1">
+                <div className="space-y-1.5 pt-1">
                   {checks.map(({ label, ok }) => (
                     <div key={label} className="flex items-center gap-2 text-xs">
-                      <Check size={12} style={{ color: ok ? 'var(--primary)' : 'var(--muted-foreground)' }} />
+                      <Check size={14} style={{ color: ok ? 'var(--primary)' : 'var(--muted-foreground)' }} />
                       <span style={{ color: ok ? 'var(--primary)' : 'var(--muted-foreground)' }}>{label}</span>
                     </div>
                   ))}
@@ -307,14 +305,14 @@ export default function RegisterPage() {
 
             {/* Confirmation mot de passe */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              <label className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                 Confirmer le mot de passe
               </label>
               <div className="relative">
                 <Input name="confirm_password" type={showConfirm ? 'text' : 'password'}
-                  placeholder="••••••••" required className="h-10 pr-10"
+                  required className="h-11 pr-10 rounded-md"
                   value={confirm} onChange={(e) => setConfirm(e.target.value)}
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+                  style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
                 <button type="button" onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
                   style={{ color: 'var(--muted-foreground)' }}>
@@ -322,32 +320,32 @@ export default function RegisterPage() {
                 </button>
               </div>
               {confirm.length > 0 && (
-                <p className="text-xs" style={{ color: passwordsMatch ? 'var(--primary)' : '#ef4444' }}>
+                <p className="text-xs mt-1.5" style={{ color: passwordsMatch ? 'var(--primary)' : '#ef4444' }}>
                   {passwordsMatch ? '✓ Les mots de passe correspondent' : '✗ Les mots de passe ne correspondent pas'}
                 </p>
               )}
             </div>
 
             {/* Submit */}
-            <Button type="submit" disabled={isPending} className="w-full h-11 font-semibold mt-2"
+            <Button type="submit" disabled={isPending} className="w-full h-11 font-medium rounded-md mt-6 shadow-none"
               style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
               {isPending ? 'Création en cours...' : 'Créer mon compte'}
             </Button>
           </form>
 
           <div className="my-6 flex items-center justify-center gap-4">
-            <div className="h-px flex-1 bg-[var(--border)]" />
-            <span className="text-xs text-[var(--muted-foreground)] uppercase font-semibold">
-              Ou
+            <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
+              ou
             </span>
-            <div className="h-px flex-1 bg-[var(--border)]" />
+            <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
           </div>
 
           <GoogleLoginButton />
 
           <p className="text-center text-sm mt-6" style={{ color: 'var(--muted-foreground)' }}>
             Déjà un compte ?{' '}
-            <Link href="/login" className="font-medium" style={{ color: 'var(--primary)' }}>
+            <Link href="/login" className="font-medium hover:underline" style={{ color: 'var(--foreground)' }}>
               Se connecter
             </Link>
           </p>
