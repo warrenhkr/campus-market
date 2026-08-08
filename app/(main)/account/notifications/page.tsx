@@ -9,7 +9,6 @@ import {
   CreditCard, Headphones, AlertCircle, CheckCheck, Trash2,
 } from 'lucide-react'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface Notification {
@@ -52,20 +51,14 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const res = await fetch('/api/notifications')
+      if (res.status === 401) {
         router.push('/login')
         return
       }
 
-      const { data } = await supabase
-        .from('notifications')
-        .select('*')
-        .or(`user_id.eq.${user.id},user_id.is.null`)
-        .order('created_at', { ascending: false })
-
-      setNotifications(data ?? [])
+      const json = await res.json()
+      setNotifications(json.notifications ?? [])
       setLoading(false)
     }
     load()
@@ -73,34 +66,39 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = (id: string) => {
     startTransition(async () => {
-      const supabase = createClient()
-      await supabase.from('notifications').update({ is_read: true }).eq('id', id)
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      const res = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      }
     })
   }
 
   const handleMarkAllAsRead = () => {
     startTransition(async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .or(`user_id.eq.${user.id},user_id.is.null`)
-        .eq('is_read', false)
-
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-      toast.success('Toutes les notifications marquées comme lues')
+      const res = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mark_all: true }),
+      })
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+        toast.success('Toutes les notifications marquées comme lues')
+      }
     })
   }
 
   const handleDelete = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
     startTransition(async () => {
-      const supabase = createClient()
-      await supabase.from('notifications').delete().eq('id', id)
+      await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
     })
   }
 

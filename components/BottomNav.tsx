@@ -51,30 +51,31 @@ export function BottomNav() {
 
   useEffect(() => {
     const supabase = createClient()
-    const loadUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data } = await supabase.from('users').select('name, avatar_url').eq('id', session.user.id).single()
-        
-        let name = session.user.user_metadata?.name ?? session.user.user_metadata?.full_name ?? session.user.email
-        let avatarUrl = session.user.user_metadata?.avatar_url ?? null
-        
-        if (data) {
-          name = data.name || name
-          avatarUrl = data.avatar_url || avatarUrl
-        }
-        
-        const initials = name
-          .split(' ')
-          .map((w: string) => w[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
 
-        setUserProfile({ initials, avatarUrl })
-      } else {
+    const loadUser = async () => {
+      const res = await fetch('/api/user')
+      if (!res.ok) {
         setUserProfile(null)
+        return
       }
+
+      const json = await res.json()
+      const profile = json.profile
+      if (!profile) {
+        setUserProfile(null)
+        return
+      }
+
+      let name = profile.name ?? profile.email
+      let avatarUrl = profile.avatar_url ?? null
+      const initials = name
+        .split(' ')
+        .map((w: string) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+
+      setUserProfile({ initials, avatarUrl })
     }
     loadUser()
 

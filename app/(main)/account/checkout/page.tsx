@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, ShoppingCart, CreditCard, Phone, User, CheckCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { createClient } from '@/lib/supabase/client'
+
 import { toast } from 'sonner'
 
 interface CartItem {
@@ -42,19 +42,24 @@ export default function CheckoutPage() {
       setItems([])
     }
 
-    // Préremplit email + nom depuis Supabase
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
+    const loadUser = async () => {
+      const res = await fetch('/api/user')
+      if (!res.ok) {
         router.push('/login')
         return
       }
-      setEmail(user.email ?? '')
-      supabase.from('users').select('name').eq('id', user.id).single()
-        .then(({ data }) => {
-          if (data?.name) setFullName(data.name)
-        })
-    })
+
+      const json = await res.json()
+      if (!json.profile) {
+        router.push('/login')
+        return
+      }
+
+      setEmail(json.profile.email ?? '')
+      setFullName(json.profile.name ?? '')
+    }
+
+    loadUser()
   }, [router])
 
   const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)

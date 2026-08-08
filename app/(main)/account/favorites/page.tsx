@@ -7,7 +7,6 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Heart, Trash2 } from 'lucide-react'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface FavoriteItem {
@@ -30,15 +29,12 @@ export default function FavoritesPage() {
 
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
       try {
         const res = await fetch('/api/favorites')
+        if (res.status === 401) {
+          router.push('/login')
+          return
+        }
         const data = await res.json()
         setFavorites(data.favorites ?? [])
       } catch {

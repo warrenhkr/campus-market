@@ -9,8 +9,9 @@ import { AddToCartButton } from '@/components/AddToCartButton'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import {
   ArrowLeft, Store, Package, Star,
-  ShoppingCart, Share2, CheckCircle,
+  ShoppingCart, CheckCircle,
 } from 'lucide-react'
+import { ShareButton } from '@/components/ShareButton'
 
 async function getProduct(id: string) {
   try {
@@ -143,21 +144,25 @@ export default async function ProductDetailPage({
         <AnimatedSection delay={0.15} direction="right">
           <div className="flex flex-col h-full">
 
-            {product.category && (
-              <Link
-                href={`/products?category=${product.category.id}`}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold mb-3
-                  w-fit px-3 py-1 rounded-full transition-all hover:opacity-80"
-                style={{
-                  background: 'var(--primary-dim)',
-                  border: '1px solid var(--primary-border)',
-                  color: 'var(--primary)',
-                }}
-              >
-                <Package size={11} />
-                {product.category.name}
-              </Link>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {product.category && (
+                <Link
+                  href={`/products?category=${product.category.id}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold w-fit px-3 py-1 rounded-full transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--primary-dim)',
+                    border: '1px solid var(--primary-border)',
+                    color: 'var(--primary)',
+                  }}
+                >
+                  <Package size={11} />
+                  {product.category.name}
+                </Link>
+              )}
+              <span className="inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border" style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}>
+                {product.type === 'DIGITAL' ? 'Produit numérique' : 'Produit physique'}
+              </span>
+            </div>
 
             <h1
               className="text-2xl md:text-3xl font-extrabold mb-3"
@@ -254,22 +259,8 @@ export default async function ProductDetailPage({
                 className="w-12 h-12 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
               />
 
-              <button
-                className="w-12 h-12 flex items-center justify-center rounded-xl transition-all
-                  hover:scale-105 active:scale-95"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--muted-foreground)',
-                }}
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    navigator.clipboard.writeText(window.location.href)
-                  }
-                }}
-              >
-                <Share2 size={18} />
-              </button>
+              {/* Share button is a client component to avoid passing handlers from server */}
+              <ShareButton productId={product.id} />
             </div>
 
             {/* Vendeur */}

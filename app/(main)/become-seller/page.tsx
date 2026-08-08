@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Store, CheckCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -189,6 +190,7 @@ export default function BecomeSellerPage() {
                       onChange={(e) => setShopName(e.target.value)}
                       placeholder="Ex: Tech by Warren"
                       required
+                      maxLength={60}
                       className="h-10"
                       style={{
                         background: 'var(--surface-2)',
@@ -202,12 +204,12 @@ export default function BecomeSellerPage() {
                     <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                       Description <span style={{ color: 'var(--subtle)' }}>(optionnel)</span>
                     </label>
-                    <textarea
+                    <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Décris ce que tu vas vendre..."
                       rows={3}
-                      className="w-full px-3 py-2 text-sm rounded-xl outline-none resize-none"
+                      className="rounded-xl resize-none text-sm px-3 py-2"
                       style={{
                         background: 'var(--surface-2)',
                         border: '1px solid var(--border)',

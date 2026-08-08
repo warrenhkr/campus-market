@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 })
+  }
+
+  const url = new URL(req.url)
+  const productId = url.searchParams.get('product_id')
+
+  if (productId) {
+    const favorite = await prisma.favorite.findFirst({
+      where: { user_id: user.id, product_id: productId },
+    })
+    return NextResponse.json({ favorite: !!favorite })
   }
 
   const favorites = await prisma.favorite.findMany({

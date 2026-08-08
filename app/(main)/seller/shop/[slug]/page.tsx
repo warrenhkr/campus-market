@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -16,13 +17,41 @@ async function getShop(slug: string) {
         },
         products: {
           where: { status: 'APPROVED', is_available: true },
-          include: { reviews: true, category: true },
+          include: {
+            reviews: { include: { user: { select: { name: true } } } },
+            category: true,
+          },
           orderBy: { created_at: 'desc' },
         },
       },
     })
   } catch {
     return null
+  }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const shop = await getShop(slug)
+  if (!shop) {
+    return { title: 'Boutique Campus Market' }
+  }
+
+  return {
+    title: shop.meta_title ?? shop.name,
+    description: shop.meta_description ?? shop.description ?? undefined,
+    openGraph: {
+      title: shop.meta_title ?? shop.name,
+      description: shop.meta_description ?? shop.description ?? undefined,
+      type: 'website',
+      images: shop.og_image_url ? [{ url: shop.og_image_url, alt: shop.name }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: shop.meta_title ?? shop.name,
+      description: shop.meta_description ?? shop.description ?? undefined,
+      images: shop.og_image_url ? [shop.og_image_url] : undefined,
+    },
   }
 }
 
@@ -40,16 +69,60 @@ export default async function ShopPage({
     ? allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length
     : 0
 
+  const shopConfig = {
+    primaryColor: (shop as typeof shop & { primary_color?: string | null }).primary_color,
+    textColor: (shop as typeof shop & { text_color?: string | null }).text_color,
+    backgroundColor: (shop as typeof shop & { background_color?: string | null }).background_color,
+    logoUrl: (shop as typeof shop & { logo_url?: string | null }).logo_url,
+    bannerUrl: (shop as typeof shop & { banner_url?: string | null }).banner_url,
+    showBanner: (shop as typeof shop & { show_banner?: boolean | null }).show_banner,
+    showContact: (shop as typeof shop & { show_contact?: boolean | null }).show_contact,
+    showSocialLinks: (shop as typeof shop & { show_social_links?: boolean | null }).show_social_links,
+    showCategories: (shop as typeof shop & { show_categories?: boolean | null }).show_categories,
+    showFeaturedProducts: (shop as typeof shop & { show_featured_products?: boolean | null }).show_featured_products,
+    showNewProducts: (shop as typeof shop & { show_new_products?: boolean | null }).show_new_products,
+    showReviews: (shop as typeof shop & { show_reviews?: boolean | null }).show_reviews,
+    email: (shop as typeof shop & { email?: string | null }).email,
+    contactPhone: (shop as typeof shop & { contact_phone?: string | null }).contact_phone,
+    tiktokUrl: (shop as typeof shop & { tiktok_url?: string | null }).tiktok_url,
+    youtubeUrl: (shop as typeof shop & { youtube_url?: string | null }).youtube_url,
+    ogImageUrl: (shop as typeof shop & { og_image_url?: string | null }).og_image_url,
+  }
+
+  const categories = shop.products
+    .map((product) => product.category)
+    .filter((category): category is NonNullable<typeof shop.products[number]['category']> => Boolean(category))
+    .reduce<NonNullable<typeof shop.products[number]['category']>[]>((acc, category) => {
+      if (!acc.some((item) => item.id === category.id)) acc.push(category)
+      return acc
+    }, [])
+
+  const featuredProducts = shopConfig.showFeaturedProducts
+    ? shop.products.filter((product) => product.reviews.length > 0).slice(0, 4)
+    : []
+
+  const newProducts = shopConfig.showNewProducts
+    ? shop.products.slice(0, 4)
+    : []
+
+  const styleVars = {
+    '--primary': shopConfig.primaryColor ?? 'var(--primary)',
+    '--primary-dim': shopConfig.primaryColor ? `${shopConfig.primaryColor}20` : 'var(--primary-dim)',
+    '--foreground': shopConfig.textColor ?? 'var(--foreground)',
+    '--background': shopConfig.backgroundColor ?? 'var(--background)',
+    '--surface': shopConfig.backgroundColor ?? 'var(--surface)',
+  } as React.CSSProperties
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10" style={styleVars}>
 
       {/* Breadcrumb */}
       <AnimatedSection delay={0}>
         <div className="flex items-center gap-2 mb-8 text-xs"
           style={{ color: 'var(--muted-foreground)' }}>
-          <Link href="/" className="hover:text-[var(--foreground)] transition-colors">Accueil</Link>
+          <Link href="/" className="hover:text-foreground transition-colors">Accueil</Link>
           <span>/</span>
-          <Link href="/products" className="hover:text-[var(--foreground)] transition-colors">Produits</Link>
+          <Link href="/products" className="hover:text-foreground transition-colors">Produits</Link>
           <span>/</span>
           <span style={{ color: 'var(--foreground)' }}>{shop.name}</span>
         </div>
@@ -63,9 +136,12 @@ export default async function ShopPage({
             style={{ background: 'var(--primary)', transform: 'translate(30%, -30%)' }} />
 
           <div className="flex items-start gap-6 relative">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
               style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-border)' }}>
-              {shop.image_url ? (
+              {shopConfig.logoUrl ? (
+                <Image src={shopConfig.logoUrl} alt={shop.name} width={80} height={80}
+                  className="object-cover w-full h-full" />
+              ) : shop.image_url ? (
                 <Image src={shop.image_url} alt={shop.name} width={80} height={80}
                   className="object-cover w-full h-full" />
               ) : (
@@ -83,6 +159,18 @@ export default async function ShopPage({
                   {shop.description}
                 </p>
               )}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {shopConfig.showContact && (shopConfig.contactPhone || shopConfig.email) && (
+                  <span className="text-xs rounded-full border px-3 py-1" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                    {shopConfig.contactPhone || shopConfig.email}
+                  </span>
+                )}
+                {shopConfig.showSocialLinks && (shop.facebook_url || shop.instagram_url || shop.whatsapp_url || shop.website_url) && (
+                  <span className="text-xs rounded-full border px-3 py-1" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                    Réseaux disponibles
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-xs px-3 py-1 rounded-full font-medium"
                   style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}>
@@ -103,6 +191,159 @@ export default async function ShopPage({
           </div>
         </div>
       </AnimatedSection>
+
+      {shopConfig.showBanner && shopConfig.bannerUrl && (
+        <AnimatedSection delay={0.12}>
+          <div className="mb-8 overflow-hidden rounded-3xl border border-border">
+            <Image src={shopConfig.bannerUrl} alt={shop.name} width={1200} height={400} className="h-56 w-full object-cover" />
+          </div>
+        </AnimatedSection>
+      )}
+
+      {shopConfig.showCategories && categories.length > 0 && (
+        <AnimatedSection delay={0.14}>
+          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+            <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
+              Catégories
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {categories.map((category) => (
+                <span key={category.id} className="rounded-full border px-3 py-2 text-sm" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                  {category.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </AnimatedSection>
+      )}
+
+      {shopConfig.showReviews && allReviews.length > 0 && (
+        <AnimatedSection delay={0.16}>
+          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                    Avis clients
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Moyenne basée sur {allReviews.length} avis.
+                  </p>
+                </div>
+                <div className="rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold" style={{ color: 'var(--primary)' }}>
+                  {avgRating.toFixed(1)} / 5
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                {allReviews.slice(0, 3).map((review, index) => (
+                  <div key={`${review.id}-${index}`} className="rounded-3xl border border-border p-4" style={{ background: 'var(--surface)' }}>
+                    <p className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+                      {review.user?.name ?? 'Client'}
+                    </p>
+                    <div className="flex items-center gap-1 mb-3">
+                      {Array.from({ length: 5 }).map((_, rank) => (
+                        <Star key={rank} size={12} fill={rank < review.rating ? '#F59E0B' : 'none'} style={{ color: '#F59E0B' }} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{review.comment ?? 'Aucun commentaire fourni.'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </AnimatedSection>
+      )}
+
+      {shopConfig.showFeaturedProducts && featuredProducts.length > 0 && (
+        <AnimatedSection delay={0.18}>
+          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                  Produits phares
+                </p>
+                <p className="text-sm text-muted-foreground">Nos produits les plus appréciés.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {featuredProducts.map((product) => (
+                <AnimatedCard key={product.id} index={0}>
+                  <Link href={`/products/${product.id}`} className="group block">
+                    <div className="rounded-2xl overflow-hidden transition-all duration-300" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                      <div className="relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '4/3', background: 'var(--surface-2)' }}>
+                        {product.image_url ? (
+                          <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                        ) : (
+                          <Package size={32} style={{ color: 'var(--subtle)' }} />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <p className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{product.name}</p>
+                        <p className="text-base font-bold" style={{ color: 'var(--primary)' }}>
+                          {new Intl.NumberFormat('fr-FR').format(Number(product.price))} FCFA
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                </AnimatedCard>
+              ))}
+            </div>
+          </div>
+        </AnimatedSection>
+      )}
+
+      {shopConfig.showNewProducts && newProducts.length > 0 && (
+        <AnimatedSection delay={0.2}>
+          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                  Nouveautés
+                </p>
+                <p className="text-sm text-muted-foreground">Derniers produits ajoutés en boutique.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {newProducts.map((product) => (
+                <AnimatedCard key={product.id} index={0}>
+                  <Link href={`/products/${product.id}`} className="group block">
+                    <div className="rounded-2xl overflow-hidden transition-all duration-300" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                      <div className="relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '4/3', background: 'var(--surface-2)' }}>
+                        {product.image_url ? (
+                          <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                        ) : (
+                          <Package size={32} style={{ color: 'var(--subtle)' }} />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <p className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{product.name}</p>
+                        <p className="text-base font-bold" style={{ color: 'var(--primary)' }}>
+                          {new Intl.NumberFormat('fr-FR').format(Number(product.price))} FCFA
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                </AnimatedCard>
+              ))}
+            </div>
+          </div>
+        </AnimatedSection>
+      )}
+
+      {shopConfig.showSocialLinks && (shop.facebook_url || shop.instagram_url || shop.whatsapp_url || shop.website_url || shopConfig.tiktokUrl || shopConfig.youtubeUrl) && (
+        <AnimatedSection delay={0.14}>
+          <div className="mb-8 flex flex-wrap gap-3 rounded-2xl border border-border bg-background/70 p-4">
+            {shop.facebook_url && <Link href={shop.facebook_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">Facebook</Link>}
+            {shop.instagram_url && <Link href={shop.instagram_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">Instagram</Link>}
+            {shop.whatsapp_url && <Link href={shop.whatsapp_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">WhatsApp</Link>}
+            {shop.website_url && <Link href={shop.website_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">Site web</Link>}
+            {shopConfig.tiktokUrl && <Link href={shopConfig.tiktokUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">TikTok</Link>}
+            {shopConfig.youtubeUrl && <Link href={shopConfig.youtubeUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">YouTube</Link>}
+            {shopConfig.tiktokUrl && <Link href={shopConfig.tiktokUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">TikTok</Link>}
+            {shopConfig.youtubeUrl && <Link href={shopConfig.youtubeUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">YouTube</Link>}
+          </div>
+        </AnimatedSection>
+      )}
 
       {/* Produits */}
       {shop.products.length > 0 ? (

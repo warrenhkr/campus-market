@@ -5,7 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { Store, Package, Edit, ArrowRight, Star } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Store, Edit, ArrowRight, Settings2, Star } from 'lucide-react'
+import { ShopSettingsForm } from '@/components/seller/ShopSettingsForm'
 
 async function getSellerShop(userId: string) {
   try {
@@ -58,6 +61,9 @@ export default async function SellerShopPage() {
     )
   }
 
+  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/seller/shop/${shop.slug}`
+  const shopSettingsPayload = shop as unknown as Record<string, unknown>
+
   const totalReviews = shop.products.flatMap(p => p.reviews)
   const avgRating = totalReviews.length > 0
     ? totalReviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews.length
@@ -68,13 +74,12 @@ export default async function SellerShopPage() {
 
       {/* Header boutique */}
       <AnimatedSection delay={0}>
-        <div className="rounded-3xl p-8 mb-8 relative overflow-hidden"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <Card className="rounded-3xl border border-border p-8 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] opacity-10 pointer-events-none"
             style={{ background: 'var(--primary)', transform: 'translate(30%, -30%)' }} />
 
           <div className="flex items-start gap-6 relative">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
               style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-border)' }}>
               {shop.image_url ? (
                 <Image src={shop.image_url} alt={shop.name} width={80} height={80}
@@ -94,32 +99,108 @@ export default async function SellerShopPage() {
                   {shop.description}
                 </p>
               )}
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-xs px-3 py-1 rounded-full font-medium"
-                  style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}>
-                  {shop.products.length} produit{shop.products.length > 1 ? 's' : ''}
-                </span>
-                {totalReviews.length > 0 && (
-                  <span className="flex items-center gap-1 text-xs"
-                    style={{ color: 'var(--muted-foreground)' }}>
-                    <Star size={12} style={{ color: '#F59E0B' }} fill="#F59E0B" />
-                    {avgRating.toFixed(1)} ({totalReviews.length} avis)
+              <div className="grid gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
+                    {shop.products.length} produit{shop.products.length > 1 ? 's' : ''}
                   </span>
-                )}
-                <span className="text-xs" style={{ color: 'var(--subtle)' }}>
-                  /{shop.slug}
-                </span>
+                  {totalReviews.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Star size={12} style={{ color: '#F59E0B' }} fill="#F59E0B" />
+                      {avgRating.toFixed(1)} ({totalReviews.length} avis)
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <span>/ {shop.slug}</span>
+                  <span>Magasin {shopUrl}</span>
+                </div>
               </div>
             </div>
 
-            <Link href={`/shop/${shop.slug}`}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-                transition-all hover:scale-105 flex-shrink-0"
-              style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-              Voir la boutique <ArrowRight size={12} />
-            </Link>
+            <div className="flex flex-col gap-3 shrink-0">
+              <Button asChild variant="secondary" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+                <Link href={`/seller/shop/${shop.slug}`}>
+                  Voir la boutique <ArrowRight size={12} />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+                style={{ color: 'var(--foreground)' }}>
+                <Link href="/seller/settings">
+                  <Settings2 size={12} /> Paramètres
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+                style={{ color: 'var(--foreground)' }}>
+                <Link href={shopUrl} target="_blank" rel="noreferrer">
+                  Partager
+                </Link>
+              </Button>
+            </div>
           </div>
-        </div>
+        </Card>
+      </AnimatedSection>
+
+      <AnimatedSection delay={0.05}>
+        <Card className="rounded-3xl border border-border p-8 mb-8">
+          <CardHeader className="space-y-3">
+            <CardTitle className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
+              Paramètres de la boutique
+            </CardTitle>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              Gérez les informations générales, l’apparence, la livraison, les préférences de paiement et les réseaux sociaux de votre boutique.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ShopSettingsForm
+              shop={{
+                id: String(shopSettingsPayload.id ?? ''),
+                name: String(shopSettingsPayload.name ?? ''),
+                slug: String(shopSettingsPayload.slug ?? ''),
+                description: shopSettingsPayload.description ? String(shopSettingsPayload.description) : null,
+                email: shopSettingsPayload.email ? String(shopSettingsPayload.email) : null,
+                phone: shopSettingsPayload.phone ? String(shopSettingsPayload.phone) : null,
+                image_url: shopSettingsPayload.image_url ? String(shopSettingsPayload.image_url) : null,
+                logo_url: shopSettingsPayload.logo_url ? String(shopSettingsPayload.logo_url) : null,
+                banner_url: shopSettingsPayload.banner_url ? String(shopSettingsPayload.banner_url) : null,
+                favicon_url: shopSettingsPayload.favicon_url ? String(shopSettingsPayload.favicon_url) : null,
+                contact_name: shopSettingsPayload.contact_name ? String(shopSettingsPayload.contact_name) : null,
+                contact_phone: shopSettingsPayload.contact_phone ? String(shopSettingsPayload.contact_phone) : null,
+                whatsapp_url: shopSettingsPayload.whatsapp_url ? String(shopSettingsPayload.whatsapp_url) : null,
+                facebook_url: shopSettingsPayload.facebook_url ? String(shopSettingsPayload.facebook_url) : null,
+                instagram_url: shopSettingsPayload.instagram_url ? String(shopSettingsPayload.instagram_url) : null,
+                website_url: shopSettingsPayload.website_url ? String(shopSettingsPayload.website_url) : null,
+                currency: shopSettingsPayload.currency ? String(shopSettingsPayload.currency) : null,
+                language: shopSettingsPayload.language ? String(shopSettingsPayload.language) : null,
+                timezone: shopSettingsPayload.timezone ? String(shopSettingsPayload.timezone) : null,
+                status: shopSettingsPayload.status ? String(shopSettingsPayload.status) : null,
+                primary_color: shopSettingsPayload.primary_color ? String(shopSettingsPayload.primary_color) : null,
+                secondary_color: shopSettingsPayload.secondary_color ? String(shopSettingsPayload.secondary_color) : null,
+                accent_color: shopSettingsPayload.accent_color ? String(shopSettingsPayload.accent_color) : null,
+                background_color: shopSettingsPayload.background_color ? String(shopSettingsPayload.background_color) : null,
+                text_color: shopSettingsPayload.text_color ? String(shopSettingsPayload.text_color) : null,
+                show_banner: typeof shopSettingsPayload.show_banner === 'boolean' ? shopSettingsPayload.show_banner : null,
+                show_categories: typeof shopSettingsPayload.show_categories === 'boolean' ? shopSettingsPayload.show_categories : null,
+                show_featured_products: typeof shopSettingsPayload.show_featured_products === 'boolean' ? shopSettingsPayload.show_featured_products : null,
+                show_new_products: typeof shopSettingsPayload.show_new_products === 'boolean' ? shopSettingsPayload.show_new_products : null,
+                show_reviews: typeof shopSettingsPayload.show_reviews === 'boolean' ? shopSettingsPayload.show_reviews : null,
+                show_contact: typeof shopSettingsPayload.show_contact === 'boolean' ? shopSettingsPayload.show_contact : null,
+                show_social_links: typeof shopSettingsPayload.show_social_links === 'boolean' ? shopSettingsPayload.show_social_links : null,
+                delivery_enabled: typeof shopSettingsPayload.delivery_enabled === 'boolean' ? shopSettingsPayload.delivery_enabled : null,
+                delivery_fee: shopSettingsPayload.delivery_fee ? Number(shopSettingsPayload.delivery_fee) : null,
+                free_delivery_threshold: shopSettingsPayload.free_delivery_threshold ? Number(shopSettingsPayload.free_delivery_threshold) : null,
+                pickup_enabled: typeof shopSettingsPayload.pickup_enabled === 'boolean' ? shopSettingsPayload.pickup_enabled : null,
+                campus_delivery_enabled: typeof shopSettingsPayload.campus_delivery_enabled === 'boolean' ? shopSettingsPayload.campus_delivery_enabled : null,
+                local_delivery_enabled: typeof shopSettingsPayload.local_delivery_enabled === 'boolean' ? shopSettingsPayload.local_delivery_enabled : null,
+                allow_guest_checkout: typeof shopSettingsPayload.allow_guest_checkout === 'boolean' ? shopSettingsPayload.allow_guest_checkout : null,
+                allow_cancellation: typeof shopSettingsPayload.allow_cancellation === 'boolean' ? shopSettingsPayload.allow_cancellation : null,
+                meta_title: shopSettingsPayload.meta_title ? String(shopSettingsPayload.meta_title) : null,
+                meta_description: shopSettingsPayload.meta_description ? String(shopSettingsPayload.meta_description) : null,
+              }}
+            />
+          </CardContent>
+        </Card>
       </AnimatedSection>
 
       {/* Produits */}
@@ -128,20 +209,17 @@ export default async function SellerShopPage() {
           <h2 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
             Produits en vente
           </h2>
-          <Link href="/seller/products/new"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold
-              transition-all hover:scale-105"
+          <Button asChild variant="secondary" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
             style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-            + Ajouter
-          </Link>
+            <Link href="/seller/products/new">+ Ajouter</Link>
+          </Button>
         </div>
 
         {shop.products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {shop.products.map((product, i) => (
               <AnimatedCard key={product.id} index={i}>
-                <div className="rounded-2xl overflow-hidden"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <Card className="rounded-3xl overflow-hidden border border-border">
                   <div className="relative overflow-hidden flex items-center justify-center"
                     style={{ aspectRatio: '4/3', background: 'var(--surface-2)' }}>
                     {product.image_url ? (
@@ -151,7 +229,7 @@ export default async function SellerShopPage() {
                       <span className="text-4xl">📦</span>
                     )}
                   </div>
-                  <div className="p-4">
+                  <CardContent className="p-4">
                     <p className="text-sm font-semibold mb-1 line-clamp-1"
                       style={{ color: 'var(--foreground)' }}>
                       {product.name}
@@ -160,21 +238,17 @@ export default async function SellerShopPage() {
                       {new Intl.NumberFormat('fr-FR').format(Number(product.price))} FCFA
                     </p>
                     <div className="flex items-center gap-2">
-                      <Link href={`/products/${product.id}`}
-                        className="flex-1 flex items-center justify-center py-2 rounded-lg
-                          text-xs font-medium transition-all hover:scale-105"
-                        style={{ background: 'var(--surface-2)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }}>
-                        Voir
-                      </Link>
-                      <Link href={`/seller/products/${product.id}/edit`}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg
-                          transition-all hover:scale-105"
-                        style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}>
-                        <Edit size={13} />
-                      </Link>
+                      <Button asChild variant="outline" className="flex-1 py-2 rounded-lg text-xs font-medium">
+                        <Link href={`/products/${product.id}`}>Voir</Link>
+                      </Button>
+                      <Button asChild variant="secondary" className="w-8 h-8 rounded-lg">
+                        <Link href={`/seller/products/${product.id}/edit`}>
+                          <Edit size={13} />
+                        </Link>
+                      </Button>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </AnimatedCard>
             ))}
           </div>

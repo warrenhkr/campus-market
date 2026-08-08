@@ -4,11 +4,10 @@ import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Mail, Save, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { ArrowLeft, User, Mail, Save, Eye, EyeOff, CheckCircle, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface Profile {
@@ -32,22 +31,21 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const res = await fetch('/api/user')
+      if (!res.ok) {
         router.push('/login')
         return
       }
-      const { data } = await supabase
-        .from('users')
-        .select('id, name, email, role, created_at')
-        .eq('id', user.id)
-        .single()
-      if (data) {
-        setProfile(data)
-        setName(data.name ?? '')
+
+      const json = await res.json()
+      if (!json.profile) {
+        router.push('/login')
+        return
       }
+
+      setProfile(json.profile)
+      setName(json.profile.name ?? '')
       setLoading(false)
     }
     load()
@@ -55,14 +53,15 @@ export default function ProfilePage() {
 
   const handleSaveName = () => {
     startTransition(async () => {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('users')
-        .update({ name })
-        .eq('id', profile!.id)
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
 
-      if (error) {
-        toast.error('Erreur lors de la sauvegarde')
+      if (!res.ok) {
+        const json = await res.json()
+        toast.error(json.error ?? 'Erreur lors de la sauvegarde')
         return
       }
 
@@ -79,12 +78,18 @@ export default function ProfilePage() {
       return
     }
     startPasswordTransition(async () => {
-      const supabase = createClient()
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) {
-        toast.error(error.message)
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      })
+
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Erreur lors de la mise à jour du mot de passe')
         return
       }
+
       toast.success('Mot de passe mis à jour ✅')
       setCurrentPassword('')
       setNewPassword('')
@@ -319,8 +324,8 @@ export default function ProfilePage() {
         </div>
       </AnimatedSection>
 
-      {/* Devenir vendeur */}
-      {profile.role === 'USER' && (
+      {/* Devenir vendeur / Espace vendeur */}
+      {profile.role === 'USER' ? (
         <AnimatedSection delay={0.25}>
           <div
             className="mt-6 rounded-2xl p-5 flex items-center justify-between gap-4"
@@ -329,15 +334,46 @@ export default function ProfilePage() {
               border: '1px solid var(--primary-border)',
             }}
           >
-            <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              Tu veux vendre sur Campus Market ?
-            </p>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                Tu veux vendre sur Campus Market ?
+              </p>
+              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                Ouvre ta boutique et commence à gérer tes produits.
+              </p>
+            </div>
             <Link
               href="/become-seller"
               className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
               style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
             >
               Commencer
+            </Link>
+          </div>
+        </AnimatedSection>
+      ) : (
+        <AnimatedSection delay={0.25}>
+          <div
+            className="mt-6 rounded-2xl p-5 flex items-center justify-between gap-4"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                Tu es déjà vendeur.
+              </p>
+              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                Accède directement à ton espace vendeur pour gérer ta boutique.
+              </p>
+            </div>
+            <Link
+              href="/seller"
+              className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
+              style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+            >
+              Aller à l&apos;espace vendeur
             </Link>
           </div>
         </AnimatedSection>

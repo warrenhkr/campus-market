@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createClient } from '@/lib/supabase/client'
 
 interface Notification {
   id: string
@@ -31,30 +30,65 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
+  const markAllAsRead = async () => {
+    if (unreadCount === 0) return
+
+    setNotifications(prev => prev.map(notification => ({ ...notification, is_read: true })))
+    setUnreadCount(0)
+
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mark_all: true }),
+      })
+    } catch {
+      // ignore network errors; state already updated locally
+    }
+  }
+
+  const markOneAsRead = async (id: string) => {
+    const wasUnread = notifications.find(notification => notification.id === id && !notification.is_read)
+    if (!wasUnread) return
+
+    setNotifications(prev => prev.map(notification => (
+      notification.id === id ? { ...notification, is_read: true } : notification
+    )))
+    setUnreadCount(prev => Math.max(0, prev - 1))
+
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+    } catch {
+      // ignore network errors; state already updated locally
+    }
+  }
+
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const res = await fetch('/api/notifications')
+      if (!res.ok) {
         setLoading(false)
         return
       }
 
-      const { data } = await supabase
-        .from('notifications')
-        .select('*')
-        .or(`user_id.eq.${user.id},user_id.is.null`)
-        .order('created_at', { ascending: false })
-        .limit(8)
-
-      if (data) {
-        setNotifications(data)
-        setUnreadCount(data.filter(n => !n.is_read).length)
+      const json = await res.json()
+      if (json.notifications) {
+        setNotifications(json.notifications)
+        setUnreadCount(json.notifications.filter((n: Notification) => !n.is_read).length)
       }
       setLoading(false)
     }
     load()
   }, [])
+
+  useEffect(() => {
+    if (!open || unreadCount === 0) return
+    void markAllAsRead()
+  }, [open, unreadCount])
 
   if (loading || notifications.length === 0 && unreadCount === 0) {
     // On garde quand même la cloche visible même sans notifs, juste sans badge
@@ -97,22 +131,39 @@ export function NotificationBell() {
                 <p className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>
                   Notifications
                 </p>
-                {unreadCount > 0 && (
-                  <span
-                    className="px-1.5 py-0.5 text-[10px] font-bold rounded-full"
-                    style={{ background: '#F8717118', color: '#F87171' }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void markAllAsRead()
+                      }}
+                      className="text-[10px] font-semibold rounded-full px-2 py-1 transition-colors"
+                      style={{ background: '#F8717118', color: '#F87171' }}
+                    >
+                      Tout marquer lu
+                    </button>
+                  )}
+                  {unreadCount > 0 && (
+                    <span
+                      className="px-1.5 py-0.5 text-[10px] font-bold rounded-full"
+                      style={{ background: '#F8717118', color: '#F87171' }}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length > 0 ? (
                   notifications.map((notif) => (
-                    <div
+                    <button
                       key={notif.id}
-                      className="flex gap-3 px-4 py-3 transition-colors"
+                      type="button"
+                      onClick={() => void markOneAsRead(notif.id)}
+                      className="flex w-full gap-3 px-4 py-3 text-left transition-all duration-200 hover:bg-primary/10"
                       style={{
                         background: notif.is_read ? 'transparent' : 'var(--primary-dim)',
                         borderBottom: '1px solid var(--border)',
@@ -135,7 +186,7 @@ export function NotificationBell() {
                           {timeAgo(notif.created_at)}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   ))
                 ) : (
                   <div className="py-10 text-center">

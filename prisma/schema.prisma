@@ -16,6 +16,7 @@ enum UserRole {
   USER
   SELLER
   ADMIN
+
   @@map("user_role")
 }
 
@@ -23,6 +24,7 @@ enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
+
   @@map("verification_status")
 }
 
@@ -31,6 +33,7 @@ enum SubscriptionPlan {
   STARTER
   BUSINESS
   PRO
+
   @@map("subscription_plan")
 }
 
@@ -40,6 +43,7 @@ enum OrderStatus {
   CANCELLED
   SHIPPED
   DELIVERED
+
   @@map("order_status")
 }
 
@@ -49,6 +53,7 @@ enum PaymentStatus {
   CAPTURED
   FAILED
   REFUNDED
+
   @@map("payment_status")
 }
 
@@ -57,7 +62,15 @@ enum ProductStatus {
   APPROVED
   REJECTED
   HIDDEN
+
   @@map("product_status")
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+
+  @@map("product_type")
 }
 
 enum SupportTicketStatus {
@@ -65,6 +78,7 @@ enum SupportTicketStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+
   @@map("support_ticket_status")
 }
 
@@ -73,6 +87,7 @@ enum SupportTicketPriority {
   MEDIUM
   HIGH
   URGENT
+
   @@map("support_ticket_priority")
 }
 
@@ -82,6 +97,7 @@ enum SupportTicketCategory {
   ACCOUNT
   DISPUTE
   OTHER
+
   @@map("support_ticket_category")
 }
 
@@ -90,6 +106,7 @@ enum ReportStatus {
   INVESTIGATING
   RESOLVED
   DISMISSED
+
   @@map("report_status")
 }
 
@@ -98,6 +115,7 @@ enum SystemAlertSeverity {
   WARNING
   ERROR
   CRITICAL
+
   @@map("system_alert_severity")
 }
 
@@ -124,11 +142,12 @@ model User {
   favorites                 Favorite[]
   notifications             Notification[]
   admin_logs                AdminLog[]
-  support_tickets_requested SupportTicket[]    @relation("TicketRequester")
-  support_tickets_assigned  SupportTicket[]    @relation("TicketAssignee")
+  support_tickets_requested SupportTicket[]      @relation("TicketRequester")
+  support_tickets_assigned  SupportTicket[]      @relation("TicketAssignee")
   support_ticket_replies    SupportTicketReply[]
-  reports_created           Report[]           @relation("ReportCreator")
-  reports_resolved          Report[]           @relation("ReportResolver")
+  reports_created           Report[]             @relation("ReportCreator")
+  reports_resolved          Report[]             @relation("ReportResolver")
+  uploaded_media            StoreMedia[]
 
   @@map("users")
 }
@@ -163,15 +182,58 @@ model Seller {
 }
 
 model Shop {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  seller_id   String    @db.Uuid
-  name        String
-  slug        String    @unique
-  description String?
-  image_url   String?
-  created_at  DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
-  products    Product[]
+  id                      String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  seller_id               String    @db.Uuid
+  name                    String
+  slug                    String    @unique
+  description             String?
+  email                   String?
+  phone                   String?
+  image_url               String?
+  logo_url                String?
+  banner_url              String?
+  favicon_url             String?
+  contact_name            String?
+  contact_phone           String?
+  whatsapp_url            String?
+  facebook_url            String?
+  instagram_url           String?
+  tiktok_url              String?
+  youtube_url             String?
+  website_url             String?
+  og_image_url            String?
+  og_image_public_id      String?
+  og_image_media_id       String?   @db.Uuid
+  currency                String?   @default("XOF")
+  language                String?   @default("fr")
+  timezone                String?   @default("Africa/Porto-Novo")
+  status                  String?   @default("ACTIVE")
+  primary_color           String?
+  secondary_color         String?
+  accent_color            String?
+  background_color        String?
+  text_color              String?
+  show_banner             Boolean?  @default(true)
+  show_categories         Boolean?  @default(true)
+  show_featured_products  Boolean?  @default(true)
+  show_new_products       Boolean?  @default(true)
+  show_reviews            Boolean?  @default(true)
+  show_contact            Boolean?  @default(true)
+  show_social_links       Boolean?  @default(true)
+  delivery_enabled        Boolean?  @default(false)
+  delivery_fee            Decimal?  @db.Decimal(10, 2)
+  free_delivery_threshold Decimal?  @db.Decimal(10, 2)
+  pickup_enabled          Boolean?  @default(true)
+  campus_delivery_enabled Boolean?  @default(true)
+  local_delivery_enabled  Boolean?  @default(false)
+  allow_guest_checkout    Boolean?  @default(true)
+  allow_cancellation      Boolean?  @default(true)
+  meta_title              String?
+  meta_description        String?
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime  @default(now()) @db.Timestamptz(6)
+  products                Product[]
+  media                   StoreMedia[]
 
   seller Seller @relation(fields: [seller_id], references: [id], onDelete: Cascade)
 
@@ -189,6 +251,7 @@ model Product {
   stock        Int           @default(0)
   is_available Boolean       @default(true)
   status       ProductStatus @default(APPROVED)
+  type         ProductType   @default(PHYSICAL)
   created_at   DateTime      @default(now()) @db.Timestamptz(6)
   updated_at   DateTime      @default(now()) @db.Timestamptz(6)
 
@@ -196,8 +259,8 @@ model Product {
   reviews     Review[]
   reports     Report[]
   favorites   Favorite[]
-  shop        Shop      @relation(fields: [shop_id], references: [id], onDelete: Cascade)
-  category    Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  shop        Shop        @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  category    Category?   @relation(fields: [category_id], references: [id], onDelete: SetNull)
 
   @@map("products")
 }
@@ -227,7 +290,7 @@ model Order {
 
   order_items OrderItem[]
   payment     Payment?
-  user        User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("orders")
 }
@@ -324,8 +387,8 @@ model SupportTicket {
   resolved_at DateTime?             @db.Timestamptz(6)
 
   replies  SupportTicketReply[]
-  user     User  @relation("TicketRequester", fields: [user_id], references: [id], onDelete: Cascade)
-  assignee User? @relation("TicketAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+  user     User                 @relation("TicketRequester", fields: [user_id], references: [id], onDelete: Cascade)
+  assignee User?                @relation("TicketAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
 
   @@map("support_tickets")
 }
@@ -418,4 +481,23 @@ model ProcessedWebhook {
   processed_at   DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("processed_webhooks")
+}
+
+model StoreMedia {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shop_id       String?  @db.Uuid
+  uploader_id   String?  @db.Uuid
+  public_id     String   @unique
+  url           String
+  resource_type String
+  format        String?
+  width         Int?
+  height        Int?
+  bytes         Int?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  shop     Shop? @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+  uploader User? @relation(fields: [uploader_id], references: [id], onDelete: SetNull)
+
+  @@map("store_media")
 }

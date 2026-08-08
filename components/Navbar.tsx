@@ -36,10 +36,10 @@ const menuByRole: Record<string, { href: string; label: string; icon: React.Elem
     { href: '/account/cart',   label: 'Panier',     icon: Heart },
   ],
   SELLER: [
-    { href: '/products',            label: 'Produits',     icon: Package },
-    { href: '/seller',              label: 'Dashboard',    icon: LayoutDashboard },
-    { href: '/seller/products',     label: 'Mes produits', icon: Package },
-    { href: '/seller/products/new', label: '+ Ajouter',    icon: Store },
+    { href: '/products',        label: 'Produits',     icon: Package },
+    { href: '/account',         label: 'Mon compte',   icon: LayoutDashboard },
+    { href: '/seller',          label: 'Dashboard',    icon: LayoutDashboard },
+    { href: '/seller/products', label: 'Mes produits', icon: Package },
   ],
   ADMIN: [
     { href: '/products',       label: 'Produits',   icon: Package },
@@ -67,15 +67,14 @@ export function Navbar() {
     const supabase = createClient()
 
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase
-          .from('users')
-          .select('name, email, role')
-          .eq('id', user.id)
-          .single()
-        if (data) setProfile(data)
-        else setProfile({ name: user.user_metadata?.name ?? null, email: user.email!, role: 'USER' as Role })
+      const res = await fetch('/api/user')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.profile) {
+          setProfile(json.profile)
+        } else {
+          setProfile(null)
+        }
       } else {
         setProfile(null)
       }
@@ -84,21 +83,19 @@ export function Navbar() {
 
     load()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       if (session?.user) {
-        supabase.from('users')
-          .select('name, email, role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            if (data) setProfile(data)
-            else setProfile({ name: session.user.user_metadata?.name ?? null, email: session.user.email!, role: 'USER' as Role })
-            setLoading(false)
-          })
+        const res = await fetch('/api/user')
+        if (res.ok) {
+          const json = await res.json()
+          setProfile(json.profile)
+        } else {
+          setProfile({ name: session.user.user_metadata?.name ?? null, email: session.user.email!, role: 'USER' as Role })
+        }
       } else {
         setProfile(null)
-        setLoading(false)
       }
+      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
@@ -217,14 +214,26 @@ export function Navbar() {
                       }}>
                       <DropdownMenuItem asChild>
                         <Link
-                          href={profile.role === 'SELLER' ? '/seller' : '/account'}
+                          href="/account"
                           className="cursor-pointer"
                           style={{ color: 'var(--foreground)' }}
                         >
                           <LayoutDashboard size={14} className="mr-2" />
-                          {profile.role === 'SELLER' ? 'Dashboard vendeur' : 'Mon compte'}
+                          Mon compte
                         </Link>
                       </DropdownMenuItem>
+                      {profile.role === 'SELLER' && (
+                        <DropdownMenuItem asChild>
+                          <Link
+                            href="/seller"
+                            className="cursor-pointer"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            <LayoutDashboard size={14} className="mr-2" />
+                            Dashboard vendeur
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator style={{ background: 'var(--border)' }} />
                       <DropdownMenuItem
                         onClick={handleLogout}

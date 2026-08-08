@@ -69,10 +69,8 @@ export async function POST(req: NextRequest) {
     const fedapayData = await fedapayRes.json()
 
     if (!fedapayRes.ok) {
-      return NextResponse.json(
-        { error: fedapayData.message ?? 'Erreur FedaPay' },
-        { status: 400 }
-      )
+      console.error('FedaPay error response:', fedapayData)
+      return NextResponse.json({ success: false, error: fedapayData.message ?? 'Erreur FedaPay' }, { status: 200 })
     }
 
     // 3. Crée le paiement en DB
@@ -84,18 +82,27 @@ export async function POST(req: NextRequest) {
         platform_fee: total * 0.1,
         currency: 'FCFA',
         method: 'FedaPay',
-        transaction_id: String(fedapayData.v1?.transaction?.id ?? order.id),
+        transaction_id: String(fedapayData.v1?.transaction?.id ?? fedapayData.transaction?.id ?? fedapayData.data?.id ?? order.id),
         status: 'PENDING',
       },
     })
+    // Handle multiple response shapes and prefer explicit payment_url when provided
+    const v1Transaction = fedapayData?.v1?.transaction ?? fedapayData?.['v1/transaction'] ?? null
+    const transactionId = v1Transaction?.id ?? fedapayData.transaction?.id ?? fedapayData.data?.id ?? fedapayData.id
+    const paymentUrlFromResp = v1Transaction?.payment_url ?? fedapayData.payment_url ?? fedapayData.data?.payment_url
 
-    return NextResponse.json({
-      success: true,
-      order_id: order.id,
-      payment_url: `https://sandbox-api.fedapay.com/v1/transactions/${fedapayData.v1?.transaction?.id}/pay`,
-    })
+    if (paymentUrlFromResp) {
+      return NextResponse.json({ success: true, order_id: order.id, payment_url: paymentUrlFromResp })
+    }
+
+    if (transactionId) {
+      return NextResponse.json({ success: true, order_id: order.id, payment_url: `https://sandbox-api.fedapay.com/v1/transactions/${transactionId}/pay` })
+    }
+
+    console.error('FedaPay returned no transaction id (checkout):', fedapayData)
+    return NextResponse.json({ success: false, error: 'FedaPay returned no transaction id' }, { status: 200 })
   } catch (err) {
     console.error('Checkout error:', err)
-    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Erreur serveur.' }, { status: 200 })
   }
 }

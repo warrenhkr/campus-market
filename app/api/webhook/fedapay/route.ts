@@ -140,3 +140,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true }, { status: 200 })
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url)
+    const status = url.searchParams.get('status')
+    const id = url.searchParams.get('id')
+
+    console.log(`Received redirect from FedaPay (browser): status=${status}, id=${id}`)
+
+    let redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/payment/result?status=${encodeURIComponent(String(status ?? ''))}&id=${encodeURIComponent(String(id ?? ''))}`
+
+    if (id) {
+      try {
+        const fedapayRes = await fetch(`https://sandbox-api.fedapay.com/v1/transactions/${encodeURIComponent(id)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
+          },
+        })
+
+        const fedapayData = await fedapayRes.json()
+        const transaction = fedapayData?.v1?.transaction ?? fedapayData?.['v1/transaction'] ?? fedapayData?.transaction ?? fedapayData
+        const metadata = transaction?.custom_metadata || transaction?.metadata || {}
+
+        if (metadata.type === 'subscription' && metadata.seller_id && metadata.plan) {
+          const sellerId = String(metadata.seller_id)
+          const plan = String(metadata.plan)
+          const expiresAt = new Date()
+          expiresAt.setDate(expiresAt.getDate() + 30)
+
+          const seller = await prisma.seller.findUnique({ where: { id: sellerId } })
+          if (seller) {
+            await prisma.seller.update({
+              where: { id: sellerId },
+              data: {
+                subscription_plan: plan as any,
+                subscription_expires_at: expiresAt,
+              },
+            })
+
+            redirectTo += `&plan=${encodeURIComponent(plan)}`
+          }
+        }
+      } catch (err) {
+        console.error('Unable to resolve FedaPay transaction metadata in redirect handler:', err)
+      }
+    }
+
+    return NextResponse.redirect(redirectTo)
+  } catch (err) {
+    console.error('Error handling GET redirect from FedaPay:', err)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'
+    return NextResponse.redirect(`${appUrl}/payment/result?status=error`)
+  }
+}

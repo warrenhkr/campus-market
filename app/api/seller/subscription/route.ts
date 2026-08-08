@@ -49,18 +49,30 @@ export async function POST(req: NextRequest) {
     const fedapayData = await fedapayRes.json()
 
     if (!fedapayRes.ok) {
+      console.error('FedaPay error response:', fedapayData)
       return NextResponse.json(
-        { error: fedapayData.message ?? 'Erreur FedaPay' },
-        { status: 400 }
+        { success: false, error: fedapayData.message ?? 'Erreur FedaPay' },
+        { status: 200 }
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      payment_url: `https://sandbox-api.fedapay.com/v1/transactions/${fedapayData.v1?.transaction?.id}/pay`,
-    })
+    // FedaPay may return different shapes. Prefer any explicit payment_url, otherwise extract id.
+    const v1Transaction = fedapayData?.v1?.transaction ?? fedapayData?.['v1/transaction'] ?? null
+    const transactionId = v1Transaction?.id ?? fedapayData.transaction?.id ?? fedapayData.data?.id ?? fedapayData.id
+    const paymentUrlFromResp = v1Transaction?.payment_url ?? fedapayData.payment_url ?? fedapayData.data?.payment_url
+
+    if (paymentUrlFromResp) {
+      return NextResponse.json({ success: true, payment_url: paymentUrlFromResp })
+    }
+
+    if (transactionId) {
+      return NextResponse.json({ success: true, payment_url: `https://sandbox-api.fedapay.com/v1/transactions/${transactionId}/pay` })
+    }
+
+    console.error('FedaPay returned no transaction id nor payment_url:', fedapayData)
+    return NextResponse.json({ success: false, error: 'FedaPay returned no transaction id' }, { status: 200 })
   } catch (err) {
     console.error('Subscription checkout error:', err)
-    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Erreur serveur.' }, { status: 200 })
   }
 }

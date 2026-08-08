@@ -4,12 +4,13 @@ import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Package } from 'lucide-react'
+import { ArrowLeft, Package, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { ImageUpload } from '@/components/ImageUpload'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface Category {
@@ -28,18 +29,32 @@ export default function NewProductPage() {
   const [price, setPrice] = useState('')
   const [stock, setStock] = useState('1')
   const [categoryId, setCategoryId] = useState('')
+  const [productType, setProductType] = useState<'PHYSICAL' | 'DIGITAL'>('PHYSICAL')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
-  // Charge les catégories
+  // Charge les catégories depuis l'API serveur
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data } = await supabase.from('categories').select('id, name').order('name')
-      if (data) setCategories(data)
+      const res = await fetch('/api/user')
+      if (!res.ok) {
+        router.push('/login')
+        return
+      }
+
+      const userJson = await res.json()
+      if (!userJson.profile) {
+        router.push('/login')
+        return
+      }
+
+      const categoriesRes = await fetch('/api/categories')
+      if (!categoriesRes.ok) return
+      const categoriesData = await categoriesRes.json()
+      setCategories(categoriesData.categories ?? [])
     }
 
     load()
-  }, [])
+  }, [router])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,13 +66,6 @@ export default function NewProductPage() {
 
     startTransition(async () => {
       try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-          router.push('/login')
-          return
-        }
-
         const res = await fetch('/api/seller/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -66,15 +74,19 @@ export default function NewProductPage() {
             description,
             price: Number(price),
             stock: Number(stock),
-            category_id: categoryId || null,
+            category_id: categoryId === '' ? null : categoryId,
             image_url: imageUrl,
+            type: productType,
           }),
         })
 
-        const data = await res.json()
+        if (res.status === 401) {
+          router.push('/login')
+          return
+        }
 
         if (!res.ok) {
-          toast.error(data.error ?? 'Erreur lors de la création')
+          toast.error('Impossible de créer le produit')
           return
         }
 
@@ -91,13 +103,13 @@ export default function NewProductPage() {
       {/* Header */}
       <AnimatedSection delay={0}>
         <div className="flex items-center gap-4 mb-8">
-          <Link
-            href="/seller/products"
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-          >
-            <ArrowLeft size={16} style={{ color: 'var(--foreground)' }} />
-          </Link>
+          <Button asChild variant="outline" size="icon"
+            className="w-9 h-9 rounded-xl"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <Link href="/seller/products">
+              <ArrowLeft size={16} style={{ color: 'var(--foreground)' }} />
+            </Link>
+          </Button>
           <div>
             <h1 className="text-2xl font-bold"
               style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
@@ -118,17 +130,20 @@ export default function NewProductPage() {
 
             {/* Infos principales */}
             <AnimatedSection delay={0.1}>
-              <div
-                className="rounded-2xl p-6"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-              >
-                <h2 className="text-sm font-bold mb-4 flex items-center gap-2"
-                  style={{ color: 'var(--foreground)' }}>
-                  <Package size={15} style={{ color: 'var(--primary)' }} />
-                  Informations du produit
-                </h2>
-
-                <div className="space-y-4">
+              <Card className="rounded-3xl border border-border">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'var(--surface-2)' }}>
+                      <Package size={18} style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <CardTitle className="text-sm font-semibold"
+                      style={{ color: 'var(--foreground)' }}>
+                      Informations du produit
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   {/* Nom */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium"
@@ -139,7 +154,6 @@ export default function NewProductPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Calculatrice scientifique Casio"
-                      required
                       className="h-10"
                       style={{
                         background: 'var(--surface-2)',
@@ -155,12 +169,12 @@ export default function NewProductPage() {
                       style={{ color: 'var(--muted-foreground)' }}>
                       Description
                     </label>
-                    <textarea
+                    <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Décris ton produit en détail..."
                       rows={4}
-                      className="w-full px-3 py-2.5 text-sm rounded-xl outline-none resize-none"
+                      className="rounded-xl resize-none text-sm px-3 py-2.5"
                       style={{
                         background: 'var(--surface-2)',
                         border: '1px solid var(--border)',
@@ -169,44 +183,62 @@ export default function NewProductPage() {
                     />
                   </div>
 
-                  {/* Catégorie */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium"
-                      style={{ color: 'var(--muted-foreground)' }}>
-                      Catégorie
-                    </label>
-                    <select
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm rounded-xl outline-none"
-                      style={{
-                        background: 'var(--surface-2)',
-                        border: '1px solid var(--border)',
-                        color: 'var(--foreground)',
-                      }}
-                    >
-                      <option value="">Sans catégorie</option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium"
+                        style={{ color: 'var(--muted-foreground)' }}>
+                        Type de produit
+                      </label>
+                      <select
+                        value={productType}
+                        onChange={(e) => setProductType(e.target.value as 'PHYSICAL' | 'DIGITAL')}
+                        className="w-full h-10 rounded-md border border-input bg-transparent px-3 text-sm outline-none transition-colors hover:border-primary/70"
+                        style={{
+                          background: 'var(--surface-2)',
+                          color: 'var(--foreground)',
+                        }}
+                      >
+                        <option value="PHYSICAL">Physique</option>
+                        <option value="DIGITAL">Numérique</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium"
+                        style={{ color: 'var(--muted-foreground)' }}>
+                        Catégorie
+                      </label>
+                      <select
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value)}
+                        className="w-full h-10 rounded-md border border-input bg-transparent px-3 text-sm outline-none transition-colors hover:border-primary/70"
+                        style={{
+                          background: 'var(--surface-2)',
+                          color: 'var(--foreground)',
+                        }}
+                      >
+                        <option value="">Sans catégorie</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
-              </div>
+              </CardContent>
+            </Card>
             </AnimatedSection>
 
             {/* Prix & Stock */}
             <AnimatedSection delay={0.15}>
-              <div
-                className="rounded-2xl p-6"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-              >
-                <h2 className="text-sm font-bold mb-4"
-                  style={{ color: 'var(--foreground)' }}>
-                  Prix & Stock
-                </h2>
-
-                <div className="grid grid-cols-2 gap-4">
+              <Card className="rounded-3xl border border-border">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold"
+                    style={{ color: 'var(--foreground)' }}>
+                    Prix & Stock
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium"
                       style={{ color: 'var(--muted-foreground)' }}>
@@ -218,7 +250,6 @@ export default function NewProductPage() {
                       placeholder="0"
                       type="number"
                       min="1"
-                      required
                       className="h-10"
                       style={{
                         background: 'var(--surface-2)',
@@ -248,7 +279,8 @@ export default function NewProductPage() {
                     />
                   </div>
                 </div>
-              </div>
+                </CardContent>
+              </Card>
             </AnimatedSection>
           </div>
 
@@ -257,20 +289,27 @@ export default function NewProductPage() {
 
             {/* Image */}
             <AnimatedSection delay={0.1}>
-              <div
-                className="rounded-2xl p-6"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-              >
-                <h2 className="text-sm font-bold mb-4"
-                  style={{ color: 'var(--foreground)' }}>
-                  Image du produit
-                </h2>
-                <ImageUpload
-                  value={imageUrl}
-                  onChange={setImageUrl}
-                  bucket="products"
-                />
-              </div>
+              <Card className="rounded-3xl border border-border p-6">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'var(--surface-2)' }}>
+                      <Package size={18} style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <CardTitle className="text-sm font-semibold"
+                      style={{ color: 'var(--foreground)' }}>
+                      Image du produit
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ImageUpload
+                    value={imageUrl}
+                    onChange={setImageUrl}
+                    bucket="products"
+                  />
+                </CardContent>
+              </Card>
             </AnimatedSection>
 
             {/* Submit */}
@@ -279,19 +318,18 @@ export default function NewProductPage() {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="w-full h-12 font-bold text-sm"
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'var(--primary-foreground)',
-                    boxShadow: '0 0 20px rgba(163,230,53,0.15)',
-                  }}
+                  className="w-full h-12 font-bold text-sm shadow-[0_0_25px_rgba(59,130,246,0.18)]"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                      Création en cours...
+                      Publication en cours...
                     </span>
-                  ) : 'Publier le produit'}
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Plus size={16} /> Publier le produit
+                    </span>
+                  )}
                 </Button>
               </motion.div>
 

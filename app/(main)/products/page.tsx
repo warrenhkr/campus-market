@@ -155,19 +155,32 @@ export default async function ProductsPage({
                       ) : (
                         <span className="text-4xl">📦</span>
                       )}
-                      {product.category && (
+                      <div className="absolute top-3 left-3 flex flex-wrap gap-2 z-10">
+                        {product.category && (
+                          <div
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: 'rgba(10,10,10,0.7)',
+                              backdropFilter: 'blur(8px)',
+                              color: 'var(--muted-foreground)',
+                              border: '1px solid var(--border)',
+                            }}
+                          >
+                            {product.category.name}
+                          </div>
+                        )}
                         <div
-                          className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-xs font-medium z-10"
+                          className="px-2 py-0.5 rounded-full text-xs font-medium"
                           style={{
                             background: 'rgba(10,10,10,0.7)',
                             backdropFilter: 'blur(8px)',
-                            color: 'var(--muted-foreground)',
+                            color: 'var(--primary)',
                             border: '1px solid var(--border)',
                           }}
                         >
-                          {product.category.name}
+                          {product.type === 'DIGITAL' ? 'Numérique' : 'Physique'}
                         </div>
-                      )}
+                      </div>
                     </div>
                     <div className="p-4">
                       <p

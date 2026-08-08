@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { AnimatedSection } from '@/components/AnimatedSection'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingUp, Calendar, Banknote, Clock, CheckCircle, XCircle } from 'lucide-react'
 
 async function getEarningsData(userId: string) {
@@ -75,18 +77,21 @@ export default async function SellerEarningsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>
-          Mes gains 💰
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          Relevé de vos reversements sur les commandes encaissées.
-        </p>
-      </div>
+      <AnimatedSection delay={0}>
+        <Card className="rounded-3xl border border-border">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
+              Mes gains 💰
+            </CardTitle>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              Relevé de vos reversements sur les commandes encaissées.
+            </p>
+          </CardHeader>
+        </Card>
+      </AnimatedSection>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <AnimatedSection delay={0.1}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Gains cumulés',         value: `${fmt(totalEarnings)} FCFA`,  icon: TrendingUp, color: '#10B981' },
           { label: 'Gains du mois en cours', value: `${fmt(monthEarnings)} FCFA`, icon: Calendar,  color: '#3B82F6' },
@@ -105,10 +110,12 @@ export default async function SellerEarningsPage() {
           </div>
         ))}
       </div>
+      </AnimatedSection>
 
       {/* Payout notice */}
-      <div className="rounded-2xl p-5 flex items-start gap-3"
-        style={{ background: '#F59E0B10', border: '1px solid #F59E0B30' }}>
+      <AnimatedSection delay={0.2}>
+        <Card className="rounded-3xl border border-border p-5"
+          style={{ background: '#F59E0B10', borderColor: '#F59E0B30' }}>
         <span className="text-xl">⏳</span>
         <div>
           <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -118,11 +125,13 @@ export default async function SellerEarningsPage() {
             Bientôt disponible — le système de retrait vers votre compte Mobile Money est en cours de déploiement.
           </p>
         </div>
-      </div>
+      </Card>
+      </AnimatedSection>
 
       {/* Table des paiements */}
-      <div className="rounded-2xl overflow-hidden"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <AnimatedSection delay={0.3}>
+        <div className="rounded-3xl overflow-hidden"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <h2 className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>
             Historique des paiements
@@ -195,6 +204,7 @@ export default async function SellerEarningsPage() {
           </div>
         )}
       </div>
+      </AnimatedSection>
     </div>
   )
 }

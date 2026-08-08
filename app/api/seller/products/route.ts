@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { productCreateSchema } from '@/lib/validators/product'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -10,14 +11,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 })
   }
 
-  const { name, description, price, stock, category_id, image_url } = await req.json()
+  const body = await req.json()
+  const parseResult = productCreateSchema.safeParse(body)
+  if (!parseResult.success) {
+    return NextResponse.json({
+      error: parseResult.error.issues.map((issue) => issue.message).join(', '),
+    }, { status: 400 })
+  }
 
-  if (!name?.trim()) {
-    return NextResponse.json({ error: 'Nom requis.' }, { status: 400 })
-  }
-  if (!price || price <= 0) {
-    return NextResponse.json({ error: 'Prix invalide.' }, { status: 400 })
-  }
+  const { name, description, price, stock, category_id, image_url, type } = parseResult.data
 
   try {
     const seller = await prisma.seller.findUnique({
@@ -25,7 +27,11 @@ export async function POST(req: NextRequest) {
       include: { shops: { take: 1 } },
     })
 
-    if (!seller || seller.verification_status !== 'APPROVED') {
+    if (!seller) {
+      return NextResponse.json({ error: 'Vendeur introuvable.' }, { status: 403 })
+    }
+
+    if (seller.verification_status === 'REJECTED') {
       return NextResponse.json({ error: 'Vendeur non approuvé.' }, { status: 403 })
     }
 
@@ -63,6 +69,7 @@ export async function POST(req: NextRequest) {
         price,
         stock: stock ?? 0,
         image_url: image_url ?? null,
+        type,
         status: 'PENDING_REVIEW',
         is_available: true,
       },
