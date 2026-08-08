@@ -66,6 +66,9 @@ export const shopSettingsSchema = z.object({
   logo_url: optionalUrl,
   banner_url: optionalUrl,
   favicon_url: optionalUrl,
+  logo_media_id: optionalString,
+  banner_media_id: optionalString,
+  favicon_media_id: optionalString,
   allow_guest_checkout: z.boolean().optional(),
   allow_cancellation: z.boolean().optional(),
 })

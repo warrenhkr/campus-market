@@ -122,6 +122,9 @@ export function ShopSettingsForm({ shop }: ShopSettingsFormProps) {
     logo_url: shop.logo_url ?? null,
     banner_url: shop.banner_url ?? null,
     favicon_url: shop.favicon_url ?? null,
+    logo_media_id: null,
+    banner_media_id: null,
+    favicon_media_id: null,
   })
 
   useEffect(() => {
@@ -256,15 +259,39 @@ export function ShopSettingsForm({ shop }: ShopSettingsFormProps) {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label>Logo</Label>
-                        <ImageUpload value={form.logo_url} onChange={(value) => updateField('logo_url', value)} bucket="shops" shopId={shop.id} />
+                        <ImageUpload value={form.logo_url} onChange={(value) => updateField('logo_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
+                          if (meta === null) {
+                            updateField('logo_media_id', null)
+                            updateField('logo_url', null)
+                            return
+                          }
+                          updateField('logo_media_id', meta.mediaId ?? null)
+                          updateField('logo_url', meta.url ?? null)
+                        }} />
                       </div>
                       <div className="space-y-2">
                         <Label>Bannière</Label>
-                        <ImageUpload value={form.banner_url} onChange={(value) => updateField('banner_url', value)} bucket="shops" shopId={shop.id} />
+                        <ImageUpload value={form.banner_url} onChange={(value) => updateField('banner_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
+                          if (meta === null) {
+                            updateField('banner_media_id', null)
+                            updateField('banner_url', null)
+                            return
+                          }
+                          updateField('banner_media_id', meta.mediaId ?? null)
+                          updateField('banner_url', meta.url ?? null)
+                        }} />
                       </div>
                       <div className="space-y-2">
                         <Label>Favicon</Label>
-                        <ImageUpload value={form.favicon_url} onChange={(value) => updateField('favicon_url', value)} bucket="shops" shopId={shop.id} />
+                        <ImageUpload value={form.favicon_url} onChange={(value) => updateField('favicon_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
+                          if (meta === null) {
+                            updateField('favicon_media_id', null)
+                            updateField('favicon_url', null)
+                            return
+                          }
+                          updateField('favicon_media_id', meta.mediaId ?? null)
+                          updateField('favicon_url', meta.url ?? null)
+                        }} />
                       </div>
                     </div>
                     <div className="space-y-4">

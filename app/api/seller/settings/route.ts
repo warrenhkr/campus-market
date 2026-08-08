@@ -31,20 +31,24 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data
 
-    // If a mediaId was provided, resolve it to public_id/url and apply to the update payload
-    let resolvedOg = { public_id: data.og_image_public_id ?? null, url: data.og_image_url ?? null }
-    let resolvedOgMediaId: string | null = null
-    if (data.og_image_media_id) {
+    // Helper to resolve media id to metadata when it belongs to this shop
+    const resolveMedia = async (mediaId?: string | null) => {
+      if (!mediaId) return { id: null as string | null, public_id: null as string | null, url: null as string | null }
       try {
-        const media = await prisma.storeMedia.findUnique({ where: { id: data.og_image_media_id } })
+        const media = await prisma.storeMedia.findUnique({ where: { id: mediaId } })
         if (media && media.shop_id === body.shopId) {
-          resolvedOg = { public_id: media.public_id, url: media.url }
-          resolvedOgMediaId = media.id
+          return { id: media.id, public_id: media.public_id, url: media.url }
         }
       } catch (e) {
-        console.warn('Failed to resolve StoreMedia for og_image_media_id', e)
+        console.warn('Failed to resolve StoreMedia for mediaId', mediaId, e)
       }
+      return { id: null, public_id: null, url: null }
     }
+
+    const resolvedOg = await resolveMedia(data.og_image_media_id ?? null)
+    const resolvedLogo = await resolveMedia(data.logo_media_id ?? null)
+    const resolvedBanner = await resolveMedia(data.banner_media_id ?? null)
+    const resolvedFavicon = await resolveMedia(data.favicon_media_id ?? null)
 
     await prisma.shop.update({
       where: { id: body.shopId },
@@ -56,18 +60,21 @@ export async function POST(req: NextRequest) {
         phone: data.phone ?? null,
         contact_name: data.contact_name ?? null,
         contact_phone: data.contact_phone ?? null,
-        logo_url: data.logo_url ?? null,
-        banner_url: data.banner_url ?? null,
-        favicon_url: data.favicon_url ?? null,
+        logo_url: resolvedLogo.url ?? data.logo_url ?? null,
+        banner_url: resolvedBanner.url ?? data.banner_url ?? null,
+        favicon_url: resolvedFavicon.url ?? data.favicon_url ?? null,
         whatsapp_url: data.whatsapp_url ?? null,
         facebook_url: data.facebook_url ?? null,
         instagram_url: data.instagram_url ?? null,
         tiktok_url: data.tiktok_url ?? null,
         youtube_url: data.youtube_url ?? null,
         website_url: data.website_url ?? null,
-        og_image_url: resolvedOg.url ?? null,
-        og_image_public_id: resolvedOg.public_id ?? null,
-        og_image_media_id: resolvedOgMediaId ?? null,
+        og_image_url: resolvedOg.url ?? data.og_image_url ?? null,
+        og_image_public_id: resolvedOg.public_id ?? data.og_image_public_id ?? null,
+        og_image_media_id: resolvedOg.id ?? null,
+        logo_media_id: resolvedLogo.id ?? data.logo_media_id ?? null,
+        banner_media_id: resolvedBanner.id ?? data.banner_media_id ?? null,
+        favicon_media_id: resolvedFavicon.id ?? data.favicon_media_id ?? null,
         currency: data.currency ?? 'XOF',
         language: data.language ?? 'fr',
         timezone: data.timezone ?? 'Africa/Porto-Novo',

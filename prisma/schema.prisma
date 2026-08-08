@@ -204,6 +204,9 @@ model Shop {
   og_image_url            String?
   og_image_public_id      String?
   og_image_media_id       String?   @db.Uuid
+  logo_media_id           String?   @db.Uuid
+  banner_media_id         String?   @db.Uuid
+  favicon_media_id        String?   @db.Uuid
   currency                String?   @default("XOF")
   language                String?   @default("fr")
   timezone                String?   @default("Africa/Porto-Novo")
