@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import crypto from 'crypto'
+
+const VALID_SUBSCRIPTION_PLANS = ['STARTER', 'BUSINESS', 'PRO'] as const
+type SubscriptionPlan = (typeof VALID_SUBSCRIPTION_PLANS)[number]
+const isValidSubscriptionPlan = (value: string): value is SubscriptionPlan =>
+  (VALID_SUBSCRIPTION_PLANS as readonly string[]).includes(value)
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +43,13 @@ export async function POST(req: NextRequest) {
       if (metadata.type === 'subscription') {
         if (name === 'transaction.approved') {
           const sellerId = metadata.seller_id
-          const plan = metadata.plan
+          const rawPlan = String(metadata.plan ?? '')
+
+          if (!isValidSubscriptionPlan(rawPlan)) {
+            console.error(`Plan d'abonnement invalide reçu du webhook: ${rawPlan}`)
+            return NextResponse.json({ received: true }, { status: 200 })
+          }
+          const plan: SubscriptionPlan = rawPlan
           const amount = entity.amount
 
           const expectedAmount = plan === 'STARTER' ? 500 : plan === 'BUSINESS' ? 1000 : 0
@@ -60,7 +72,7 @@ export async function POST(req: NextRequest) {
                 prisma.seller.update({
                   where: { id: sellerId },
                   data: {
-                    subscription_plan: plan as any,
+                    subscription_plan: plan,
                     subscription_expires_at: expiresAt,
                   }
                 }),
@@ -82,8 +94,8 @@ export async function POST(req: NextRequest) {
                 })
               ])
             }
-          } catch (e: any) {
-            if (e.code === 'P2002') {
+          } catch (e) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
               console.log(`Webhook d'abonnement déjà traité pour la transaction: ${transactionId}`)
               return NextResponse.json({ received: true }, { status: 200 })
             }
@@ -108,6 +120,30 @@ export async function POST(req: NextRequest) {
       }
 
       if (name === 'transaction.approved') {
+        // Charge les articles de la commande pour décrémenter le stock des
+        // produits suivis (stock_mode = TRACKED). Fait ici plutôt qu'au
+        // moment du checkout : le stock ne doit bouger qu'une fois le
+        // paiement réellement confirmé par FedaPay, jamais avant.
+        const orderItems = await prisma.orderItem.findMany({
+          where: { order_id: payment.order_id },
+          select: {
+            product_id: true,
+            quantity: true,
+            product: { select: { stock_mode: true } },
+          },
+        })
+
+        const stockUpdates = orderItems
+          .filter((item) => item.product.stock_mode === 'TRACKED')
+          .map((item) =>
+            // updateMany avec condition stock >= quantity : ne décrémente
+            // jamais sous 0, même en cas d'appels concurrents du webhook.
+            prisma.product.updateMany({
+              where: { id: item.product_id, stock: { gte: item.quantity } },
+              data: { stock: { decrement: item.quantity } },
+            })
+          )
+
         await prisma.$transaction([
           prisma.payment.update({
             where: { id: payment.id },
@@ -116,7 +152,8 @@ export async function POST(req: NextRequest) {
           prisma.order.update({
             where: { id: payment.order_id },
             data: { status: 'COMPLETED' }
-          })
+          }),
+          ...stockUpdates,
         ])
       } else {
         // transaction.canceled ou transaction.failed
@@ -167,21 +204,27 @@ export async function GET(req: NextRequest) {
 
         if (metadata.type === 'subscription' && metadata.seller_id && metadata.plan) {
           const sellerId = String(metadata.seller_id)
-          const plan = String(metadata.plan)
-          const expiresAt = new Date()
-          expiresAt.setDate(expiresAt.getDate() + 30)
+          const rawPlan = String(metadata.plan)
 
-          const seller = await prisma.seller.findUnique({ where: { id: sellerId } })
-          if (seller) {
-            await prisma.seller.update({
-              where: { id: sellerId },
-              data: {
-                subscription_plan: plan as any,
-                subscription_expires_at: expiresAt,
-              },
-            })
+          if (isValidSubscriptionPlan(rawPlan)) {
+            const plan: SubscriptionPlan = rawPlan
+            const expiresAt = new Date()
+            expiresAt.setDate(expiresAt.getDate() + 30)
 
-            redirectTo += `&plan=${encodeURIComponent(plan)}`
+            const seller = await prisma.seller.findUnique({ where: { id: sellerId } })
+            if (seller) {
+              await prisma.seller.update({
+                where: { id: sellerId },
+                data: {
+                  subscription_plan: plan,
+                  subscription_expires_at: expiresAt,
+                },
+              })
+
+              redirectTo += `&plan=${encodeURIComponent(plan)}`
+            }
+          } else {
+            console.error(`Plan d'abonnement invalide reçu lors de la redirection: ${rawPlan}`)
           }
         }
       } catch (err) {

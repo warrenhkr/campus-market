@@ -1,8 +1,3 @@
-'use client'
-
-import { motion, useInView } from 'framer-motion'
-import { useRef } from 'react'
-
 interface AnimatedSectionProps {
   children: React.ReactNode
   className?: string
@@ -16,36 +11,26 @@ export function AnimatedSection({
   delay = 0,
   direction = 'up',
 }: AnimatedSectionProps) {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
-
+  // Keep the fade animation, but avoid moving the section in layout space.
+  // The vertical transform was visually lifting the content and creating overlap
+  // between headings and the cards underneath on seller pages.
   const directionMap = {
-    up:    { y: 40, x: 0 },
-    down:  { y: -40, x: 0 },
-    left:  { y: 0, x: 40 },
-    right: { y: 0, x: -40 },
-  }
+    up: '',
+    down: '',
+    left: '',
+    right: '',
+  } as const
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{
-        opacity: 0,
-        ...directionMap[direction],
-      }}
-      animate={isInView ? {
-        opacity: 1,
-        y: 0,
-        x: 0,
-      } : {}}
-      transition={{
-        duration: 0.6,
-        delay,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      className={className}
+    <div
+      className={[
+        'opacity-100 transition-all duration-600 ease-[cubic-bezier(0.22,1,0.36,1)]',
+        directionMap[direction],
+        className,
+      ].join(' ')}
+      style={{ transitionDelay: `${delay}s` }}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }

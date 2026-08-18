@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowLeft, User, Mail, Save, Eye, EyeOff, CheckCircle, Store } from 'lucide-react'
+import { ArrowLeft, User, Mail, Save, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AnimatedSection } from '@/components/AnimatedSection'
@@ -25,7 +25,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -91,7 +90,6 @@ export default function ProfilePage() {
       }
 
       toast.success('Mot de passe mis à jour ✅')
-      setCurrentPassword('')
       setNewPassword('')
     })
   }

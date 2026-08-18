@@ -3,10 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { Package, ShoppingCart, Store, Plus, TrendingUp, Clock, CheckCircle, ArrowRight } from 'lucide-react'
+import { PackageIcon, ShoppingCartIcon, StoreIcon, PlusIcon, TrendingUpIcon, ClockIcon, CheckCircleIcon, ArrowRightIcon, AlertTriangleIcon } from '@/components/ServerIcons'
 
 async function getSellerData(userId: string) {
   const seller = await prisma.seller.findUnique({
@@ -14,9 +13,7 @@ async function getSellerData(userId: string) {
     include: {
       shops: {
         include: {
-          products: {
-            include: { order_items: true },
-          },
+          products: true,
         },
       },
     },
@@ -25,10 +22,20 @@ async function getSellerData(userId: string) {
   if (!seller) return null
 
   const allProducts = seller.shops.flatMap(s => s.products)
-  const allOrderItems = allProducts.flatMap(p => p.order_items)
-  const totalRevenue = allOrderItems.reduce((acc, oi) => acc + Number(oi.price) * oi.quantity, 0)
-
   const shopIds = seller.shops.map((shop) => shop.id)
+
+  // Le vrai gain du vendeur (après commission plateforme, déjà figé par
+  // boutique au moment de chaque paiement confirmé) — pas le chiffre
+  // d'affaires brut, qui inclut la part reversée à la plateforme.
+  const capturedSplits = (await prisma.paymentSplit.findMany({
+    where: { shop_id: { in: shopIds }, payment: { status: 'CAPTURED' } },
+    select: { seller_earning: true },
+  }).catch(() => [] as Array<{ seller_earning: number | string | { toNumber: () => number } }>)) as Array<{ seller_earning: number | string | { toNumber: () => number } }>
+  const totalEarnings = capturedSplits.reduce<number>((acc, split) => acc + Number(split.seller_earning), 0)
+
+  const totalOrdersCount = await prisma.order.count({
+    where: { order_items: { some: { product: { shop_id: { in: shopIds } } } } },
+  }).catch(() => 0)
 
   const recentOrders = await prisma.order.findMany({
     where: {
@@ -45,21 +52,31 @@ async function getSellerData(userId: string) {
     take: 5,
   }).catch(() => [])
 
+  // Produits dont le stock passe sous leur propre seuil d'alerte — configuré
+  // par le vendeur dans la fiche produit (onglet Stock).
+  const lowStockProducts = allProducts.filter(
+    (product) =>
+      product.stock_mode === 'TRACKED' &&
+      product.low_stock_threshold != null &&
+      product.stock <= product.low_stock_threshold
+  )
+
   return {
     seller,
     totalProducts: allProducts.length,
-    totalOrders: recentOrders.length,
-    totalRevenue,
+    totalOrders: totalOrdersCount,
+    totalEarnings,
     recentOrders,
+    lowStockProducts,
   }
 }
 
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  PENDING:   { label: 'En attente',  color: '#F59E0B', icon: Clock },
-  COMPLETED: { label: 'Complété',    color: '#10B981', icon: CheckCircle },
-  CANCELLED: { label: 'Annulé',      color: '#F87171', icon: Clock },
-  SHIPPED:   { label: 'Expédié',     color: '#3B82F6', icon: Package },
-  DELIVERED: { label: 'Livré',       color: '#10B981', icon: CheckCircle },
+  PENDING:   { label: 'En attente',  color: '#F59E0B', icon: ClockIcon },
+  COMPLETED: { label: 'Complété',    color: '#10B981', icon: CheckCircleIcon },
+  CANCELLED: { label: 'Annulé',      color: '#F87171', icon: ClockIcon },
+  SHIPPED:   { label: 'Expédié',     color: '#3B82F6', icon: PackageIcon },
+  DELIVERED: { label: 'Livré',       color: '#10B981', icon: CheckCircleIcon },
 }
 
 export default async function SellerDashboardPage() {
@@ -70,24 +87,20 @@ export default async function SellerDashboardPage() {
   const data = await getSellerData(user.id)
   if (!data) redirect('/become-seller')
 
-  const { seller, totalProducts, totalOrders, totalRevenue, recentOrders } = data
+  // Spacer for mobile bottom nav
+  const MobileSpacer = () => <div className="h-24 md:hidden" />
+
+  const { seller, totalProducts, totalOrders, totalEarnings, recentOrders, lowStockProducts } = data
 
   const STATS = [
-    { label: 'Produits', value: totalProducts, icon: Package, color: '#A3E635' },
-    { label: 'Commandes', value: totalOrders, icon: ShoppingCart, color: '#3B82F6' },
-    { label: 'Revenus', value: `${new Intl.NumberFormat('fr-FR').format(totalRevenue)} FCFA`, icon: TrendingUp, color: '#10B981' },
-    { label: 'Boutiques', value: seller.shops.length, icon: Store, color: '#F59E0B' },
-  ]
-
-  const QUICK_LINKS = [
-    { href: '/seller/products/new', label: 'Ajouter un produit', icon: Plus, color: '#8B5CF6' },
-    { href: '/seller/products', label: 'Mes produits', icon: Package, color: '#3B82F6' },
-    { href: '/seller/orders', label: 'Commandes', icon: ShoppingCart, color: '#F59E0B' },
-    { href: '/seller/shop', label: 'Ma boutique', icon: Store, color: '#10B981' },
+    { label: 'Produits', value: totalProducts, icon: PackageIcon, color: '#A3E635' },
+    { label: 'Commandes', value: totalOrders, icon: ShoppingCartIcon, color: '#3B82F6' },
+    { label: 'Mes gains', value: `${new Intl.NumberFormat('fr-FR').format(totalEarnings)} FCFA`, icon: TrendingUpIcon, color: '#10B981' },
+    { label: 'Boutiques', value: seller.shops.length, icon: StoreIcon, color: '#F59E0B' },
   ]
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="w-full px-4 pb-12 pt-4 sm:px-6 lg:px-8 md:pt-5">
 
       <AnimatedSection delay={0}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-10 gap-4">
@@ -103,7 +116,7 @@ export default async function SellerDashboardPage() {
           <Button asChild>
             <Link href="/seller/products/new" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105"
               style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-              <Plus size={16} />
+              <PlusIcon size={16} />
               Ajouter un produit
             </Link>
           </Button>
@@ -132,29 +145,32 @@ export default async function SellerDashboardPage() {
         ))}
       </div>
 
-      {/* Quick links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
-        {QUICK_LINKS.map(({ href, label, icon: Icon, color }, i) => (
-          <AnimatedCard key={href} index={i} className="h-full">
-            <Card className="h-full border-border bg-background shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-md">
-              <CardContent className="flex h-full flex-col justify-between gap-6 p-5">
-                <div className="space-y-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl"
-                    style={{ background: `${color}20` }}>
-                    <Icon size={20} style={{ color }} />
-                  </div>
-                  <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-                    {label}
-                  </p>
-                </div>
-                <Link href={href} className="inline-flex items-center justify-center rounded-full border border-border bg-muted/50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                  Aller
-                </Link>
-              </CardContent>
-            </Card>
-          </AnimatedCard>
-        ))}
-      </div>
+      {/* Alerte stock bas — n'apparaît que si au moins un produit suivi passe
+          sous son seuil d'alerte configuré (remplace les raccourcis vers les
+          pages déjà accessibles en permanence depuis la barre de navigation). */}
+      {lowStockProducts.length > 0 && (
+        <AnimatedSection delay={0.15}>
+          <Link
+            href="/seller/products"
+            className="mb-10 flex items-center gap-4 rounded-2xl p-5 transition-transform hover:-translate-y-0.5"
+            style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)' }}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'rgba(245, 158, 11, 0.15)' }}>
+              <AlertTriangleIcon size={18} style={{ color: '#F59E0B' }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                {lowStockProducts.length} produit{lowStockProducts.length > 1 ? 's' : ''} en stock bas
+              </p>
+              <p className="truncate text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                {lowStockProducts.slice(0, 3).map((p) => p.name).join(', ')}
+                {lowStockProducts.length > 3 ? '…' : ''}
+              </p>
+            </div>
+            <ArrowRightIcon size={16} style={{ color: '#F59E0B' }} className="shrink-0" />
+          </Link>
+        </AnimatedSection>
+      )}
 
       {/* Commandes récentes */}
       <AnimatedSection delay={0.2}>
@@ -168,7 +184,7 @@ export default async function SellerDashboardPage() {
             <Link href="/seller/orders"
               className="flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-colors"
               style={{ color: 'var(--primary)' }}>
-              Voir tout <ArrowRight size={12} />
+              Voir tout <ArrowRightIcon size={12} />
             </Link>
           </div>
 

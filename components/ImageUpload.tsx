@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Upload, X, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface ImageUploadProps {
@@ -59,23 +58,25 @@ export function ImageUpload({
         console.error('Cloudinary upload error', result)
         const msg = result?.error?.message || result?.error || result?.message || 'Upload Cloudinary échoué'
         toast.error(String(msg))
-        setUploading(false)
         return
       }
 
+      console.log('✅ Image uploaded successfully:', result.url)
       onChange(result.url)
-        if (typeof onMeta === 'function') {
-          onMeta({
-            url: result.url,
-            public_id: result.public_id,
-            resource_type: result.resource_type,
-            format: result.format,
-            width: result.width,
-            height: result.height,
-            bytes: result.bytes,
-            mediaId: result.mediaId ?? null,
-          })
-        }
+      
+      if (typeof onMeta === 'function') {
+        onMeta({
+          url: result.url,
+          public_id: result.public_id,
+          resource_type: result.resource_type,
+          format: result.format,
+          width: result.width,
+          height: result.height,
+          bytes: result.bytes,
+          mediaId: result.mediaId ?? null,
+        })
+      }
+      
       toast.success('Image enregistrée avec succès ✅')
     } catch (err) {
       console.error(err)

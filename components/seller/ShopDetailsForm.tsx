@@ -62,7 +62,7 @@ export function ShopDetailsForm({
         }
 
         toast.success('Détails de la boutique mis à jour.')
-      } catch (err) {
+      } catch {
         toast.error('Erreur réseau. Réessaie plus tard.')
       }
     })

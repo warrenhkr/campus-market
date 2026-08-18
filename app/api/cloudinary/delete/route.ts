@@ -76,8 +76,8 @@ export async function POST(req: NextRequest) {
     const cloudinary = await configureCloudinaryAndGetClient(cloudName)
 
     // destroy the resource. use invalidate to clear cached CDN
-    const result = await new Promise((resolve, reject) => {
-      cloudinary.uploader.destroy(publicId, { invalidate: true }, (err: any, res: any) => {
+    const result = await new Promise<{ result?: string } | undefined>((resolve, reject) => {
+      cloudinary.uploader.destroy(publicId, { invalidate: true }, (err: Error | null, res?: { result?: string }) => {
         if (err) return reject(err)
         resolve(res)
       })
@@ -103,8 +103,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, result, deletedMediaCount: 0 })
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cloudinary delete error:', error)
-    return NextResponse.json({ error: error?.message || 'Erreur suppression Cloudinary' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Erreur suppression Cloudinary'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -30,7 +30,7 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     if (unreadCount === 0) return
 
     setNotifications(prev => prev.map(notification => ({ ...notification, is_read: true })))
@@ -45,7 +45,7 @@ export function NotificationBell() {
     } catch {
       // ignore network errors; state already updated locally
     }
-  }
+  }, [unreadCount])
 
   const markOneAsRead = async (id: string) => {
     const wasUnread = notifications.find(notification => notification.id === id && !notification.is_read)
@@ -88,7 +88,7 @@ export function NotificationBell() {
   useEffect(() => {
     if (!open || unreadCount === 0) return
     void markAllAsRead()
-  }, [open, unreadCount])
+  }, [open, unreadCount, markAllAsRead])
 
   if (loading || notifications.length === 0 && unreadCount === 0) {
     // On garde quand même la cloche visible même sans notifs, juste sans badge

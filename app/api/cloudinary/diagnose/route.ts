@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 const CLOUDINARY_URL = process.env.CLOUDINARY_URL
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME
@@ -21,7 +21,7 @@ function detectCloudName(): string | undefined {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const cloudName = detectCloudName()
   const urlFormatValid = typeof CLOUDINARY_URL === 'string' && CLOUDINARY_URL.startsWith('cloudinary://')
   const hasPreset = Boolean(CLOUDINARY_UPLOAD_PRESET)

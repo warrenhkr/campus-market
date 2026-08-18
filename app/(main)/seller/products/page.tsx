@@ -2,19 +2,41 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { AnimatedCard } from '@/components/AnimatedCard'
-import {
-  Plus, Package, Eye, EyeOff,
-  Edit, CheckCircle, Clock, XCircle,
-} from 'lucide-react'
+import { PlusIcon } from '@/components/ServerIcons'
+
+const Plus = PlusIcon
 import ProductCard from '@/components/seller/ProductCard'
 
-function serializeProduct(product: any) {
+function serializeProduct(product: {
+  id: string
+  name: string
+  price: unknown
+  stock: number
+  status: string
+  is_available: boolean
+  image_url: string | null
+  type: 'PHYSICAL' | 'DIGITAL'
+  category: { id: string; name: string } | null
+  created_at: Date | string
+  updated_at: Date | string
+  [key: string]: unknown
+}) {
+  // Convertir tous les Decimal en nombre
+  const convertDecimal = (value: unknown): unknown => {
+    if (value && typeof value === 'object' && 'd' in value) {
+      // Decimal object de Prisma
+      return Number(value)
+    }
+    return value
+  }
+
   return {
     ...product,
     price: Number(product.price),
+    original_price: convertDecimal(product.original_price),
+    delivery_fee: convertDecimal(product.delivery_fee),
+    free_delivery_threshold: convertDecimal(product.free_delivery_threshold),
     created_at: product.created_at instanceof Date ? product.created_at.toISOString() : product.created_at,
     updated_at: product.updated_at instanceof Date ? product.updated_at.toISOString() : product.updated_at,
   }
@@ -48,13 +70,6 @@ async function getSellerProducts(userId: string) {
   } catch {
     return null
   }
-}
-
-const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  APPROVED:       { label: 'Approuvé',    color: '#10B981', icon: CheckCircle },
-  PENDING_REVIEW: { label: 'En attente', color: '#F59E0B', icon: Clock },
-  REJECTED:       { label: 'Rejeté',     color: '#F87171', icon: XCircle },
-  HIDDEN:         { label: 'Masqué',     color: '#888888', icon: EyeOff },
 }
 
 export default async function SellerProductsPage() {
@@ -118,7 +133,7 @@ export default async function SellerProductsPage() {
                 text-sm font-bold transition-all hover:scale-105"
               style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
             >
-              <Plus size={16} />
+              <PlusIcon size={16} />
               Ajouter un produit
             </Link>
           </div>

@@ -1,22 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Settings2 } from 'lucide-react'
+import { ArrowLeft, Settings2 } from '@/components/ServerIcons'
 import { createClient } from '@/lib/supabase/server'
-import { prisma } from '@/lib/prisma'
+import { getActiveShop } from '@/lib/active-shop'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ShopSettingsForm } from '@/components/seller/ShopSettingsForm'
-
-async function getSellerShop(userId: string) {
-  const seller = await prisma.seller.findUnique({
-    where: { user_id: userId },
-    include: {
-      shops: true,
-    },
-  })
-
-  return seller?.shops[0] ?? null
-}
 
 export default async function SellerSettingsPage() {
   const supabase = await createClient()
@@ -24,11 +13,11 @@ export default async function SellerSettingsPage() {
 
   if (!user) redirect('/login')
 
-  const shop = await getSellerShop(user.id)
+  const { shop } = await getActiveShop(user.id)
   if (!shop) redirect('/become-seller')
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="w-full px-4 pb-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-sm text-muted-foreground">

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { Store, Package, Star } from 'lucide-react'
+import { ShareLinkButton } from '@/components/ShareLinkButton'
+import { Store, Package, Star } from '@/components/ServerIcons'
 
 async function getShop(slug: string) {
   try {
@@ -52,7 +53,33 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description: shop.meta_description ?? shop.description ?? undefined,
       images: shop.og_image_url ? [shop.og_image_url] : undefined,
     },
+    icons: (shop as typeof shop & { favicon_url?: string | null }).favicon_url
+      ? { icon: (shop as typeof shop & { favicon_url?: string | null }).favicon_url as string }
+      : undefined,
   }
+}
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const normalized = hex.replace('#', '')
+  const full = normalized.length === 3
+    ? normalized.split('').map((char) => char + char).join('')
+    : normalized
+
+  const numeric = Number.parseInt(full, 16)
+  const r = (numeric >> 16) & 255
+  const g = (numeric >> 8) & 255
+  const b = numeric & 255
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const sanitizeShopHtml = (value: string | null | undefined) => {
+  if (!value) return ''
+
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*(['"]).*?\1/gi, '')
+    .replace(/javascript:/gi, '#')
 }
 
 export default async function ShopPage({
@@ -63,6 +90,8 @@ export default async function ShopPage({
   const { slug } = await params
   const shop = await getShop(slug)
   if (!shop) notFound()
+
+  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/shop/${shop.slug}`
 
   const allReviews = shop.products.flatMap(p => p.reviews)
   const avgRating = allReviews.length > 0
@@ -87,6 +116,9 @@ export default async function ShopPage({
     tiktokUrl: (shop as typeof shop & { tiktok_url?: string | null }).tiktok_url,
     youtubeUrl: (shop as typeof shop & { youtube_url?: string | null }).youtube_url,
     ogImageUrl: (shop as typeof shop & { og_image_url?: string | null }).og_image_url,
+    secondaryColor: (shop as typeof shop & { secondary_color?: string | null }).secondary_color,
+    accentColor: (shop as typeof shop & { accent_color?: string | null }).accent_color,
+    faviconUrl: (shop as typeof shop & { favicon_url?: string | null }).favicon_url,
   }
 
   const categories = shop.products
@@ -108,13 +140,27 @@ export default async function ShopPage({
   const styleVars = {
     '--primary': shopConfig.primaryColor ?? 'var(--primary)',
     '--primary-dim': shopConfig.primaryColor ? `${shopConfig.primaryColor}20` : 'var(--primary-dim)',
+    '--primary-border': shopConfig.primaryColor ? `${shopConfig.primaryColor}40` : 'var(--primary-border)',
+    '--secondary': shopConfig.secondaryColor ?? 'var(--primary)',
+    '--accent': shopConfig.accentColor ?? 'var(--surface-2)',
     '--foreground': shopConfig.textColor ?? 'var(--foreground)',
     '--background': shopConfig.backgroundColor ?? 'var(--background)',
     '--surface': shopConfig.backgroundColor ?? 'var(--surface)',
+    '--muted-foreground': shopConfig.textColor ? hexToRgba(shopConfig.textColor, 0.72) : 'var(--muted-foreground)',
+    '--border': shopConfig.textColor ? hexToRgba(shopConfig.textColor, 0.15) : 'var(--border)',
+    '--subtle': shopConfig.textColor ? hexToRgba(shopConfig.textColor, 0.55) : 'var(--subtle)',
   } as React.CSSProperties
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10" style={styleVars}>
+    <div
+      className="min-h-screen w-full py-10"
+      style={{
+        ...styleVars,
+        background: 'var(--background)',
+        color: 'var(--foreground)',
+      }}
+    >
+      <div className="px-2 sm:px-4 lg:px-0">
 
       {/* Breadcrumb */}
       <AnimatedSection delay={0}>
@@ -150,14 +196,19 @@ export default async function ShopPage({
             </div>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-extrabold mb-1"
-                style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
-                {shop.name}
-              </h1>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <h1 className="text-2xl font-extrabold mb-1"
+                  style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
+                  {shop.name}
+                </h1>
+                <ShareLinkButton url={shopUrl} />
+              </div>
               {shop.description && (
-                <p className="text-sm mb-3" style={{ color: 'var(--muted-foreground)' }}>
-                  {shop.description}
-                </p>
+                <div
+                  className="shop-description mb-3 text-sm leading-6"
+                  style={{ color: 'var(--muted-foreground)' }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeShopHtml(shop.description) }}
+                />
               )}
               <div className="flex flex-wrap gap-2 mb-3">
                 {shopConfig.showContact && (shopConfig.contactPhone || shopConfig.email) && (
@@ -202,7 +253,7 @@ export default async function ShopPage({
 
       {shopConfig.showCategories && categories.length > 0 && (
         <AnimatedSection delay={0.14}>
-          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+          <div className="mb-8 rounded-3xl border border-border p-6" style={{ background: 'var(--accent)' }}>
             <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
               Catégories
             </h2>
@@ -219,7 +270,7 @@ export default async function ShopPage({
 
       {shopConfig.showReviews && allReviews.length > 0 && (
         <AnimatedSection delay={0.16}>
-          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+          <div className="mb-8 rounded-3xl border border-border p-6" style={{ background: 'var(--accent)' }}>
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <div>
@@ -256,7 +307,7 @@ export default async function ShopPage({
 
       {shopConfig.showFeaturedProducts && featuredProducts.length > 0 && (
         <AnimatedSection delay={0.18}>
-          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+          <div className="mb-8 rounded-3xl border border-border p-6" style={{ background: 'var(--accent)' }}>
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -294,7 +345,7 @@ export default async function ShopPage({
 
       {shopConfig.showNewProducts && newProducts.length > 0 && (
         <AnimatedSection delay={0.2}>
-          <div className="mb-8 rounded-3xl border border-border bg-background/70 p-6">
+          <div className="mb-8 rounded-3xl border border-border p-6" style={{ background: 'var(--accent)' }}>
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -332,13 +383,11 @@ export default async function ShopPage({
 
       {shopConfig.showSocialLinks && (shop.facebook_url || shop.instagram_url || shop.whatsapp_url || shop.website_url || shopConfig.tiktokUrl || shopConfig.youtubeUrl) && (
         <AnimatedSection delay={0.14}>
-          <div className="mb-8 flex flex-wrap gap-3 rounded-2xl border border-border bg-background/70 p-4">
+          <div className="mb-8 flex flex-wrap gap-3 rounded-2xl border border-border p-4" style={{ background: 'var(--accent)' }}>
             {shop.facebook_url && <Link href={shop.facebook_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">Facebook</Link>}
             {shop.instagram_url && <Link href={shop.instagram_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">Instagram</Link>}
             {shop.whatsapp_url && <Link href={shop.whatsapp_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">WhatsApp</Link>}
             {shop.website_url && <Link href={shop.website_url} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">Site web</Link>}
-            {shopConfig.tiktokUrl && <Link href={shopConfig.tiktokUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">TikTok</Link>}
-            {shopConfig.youtubeUrl && <Link href={shopConfig.youtubeUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">YouTube</Link>}
             {shopConfig.tiktokUrl && <Link href={shopConfig.tiktokUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">TikTok</Link>}
             {shopConfig.youtubeUrl && <Link href={shopConfig.youtubeUrl} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-2 text-sm">YouTube</Link>}
           </div>
@@ -364,7 +413,7 @@ export default async function ShopPage({
                   </div>
                   <div className="p-4">
                     {product.category && (
-                      <p className="text-xs mb-1" style={{ color: 'var(--subtle)' }}>
+                      <p className="text-xs mb-1 font-medium" style={{ color: 'var(--secondary)' }}>
                         {product.category.name}
                       </p>
                     )}
@@ -405,6 +454,7 @@ export default async function ShopPage({
           </div>
         </AnimatedSection>
       )}
+      </div>
     </div>
   )
 }

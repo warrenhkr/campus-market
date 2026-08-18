@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { CheckCircle2, Loader2, Store, Image as ImageIcon, ShoppingBag, Truck, CreditCard, Bell, Share2, Search, Palette } from 'lucide-react'
+import { CheckCircle2, Loader2, Store, Truck, CreditCard, Share2, Search, Palette, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ImageUpload } from '@/components/ImageUpload'
+import { ExportPanel } from '@/components/seller/ExportPanel'
 
 interface ShopSettingsFormProps {
   shop: {
@@ -70,10 +72,61 @@ const sections = [
   { id: 'payments', label: 'Paiements', icon: CreditCard },
   { id: 'social', label: 'Réseaux', icon: Share2 },
   { id: 'seo', label: 'SEO', icon: Search },
+  { id: 'export', label: 'Export de données', icon: Download },
 ]
+
+function RichShopDescriptionEditor({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const insertAtCursor = (before: string, after = '') => {
+    const textarea = textareaRef.current
+    if (!textarea) {
+      onChange(`${value}${before}${after}`)
+      return
+    }
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selected = value.slice(start, end)
+    const next = `${value.slice(0, start)}${before}${selected}${after}${value.slice(end)}`
+    onChange(next)
+
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const newStart = start + before.length
+      const newEnd = newStart + selected.length
+      textarea.setSelectionRange(newStart, newEnd)
+    })
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: 'Gras', before: '<strong>', after: '</strong>' },
+          { label: 'Italique', before: '<em>', after: '</em>' },
+          { label: 'Lien', before: '<a href="https://" target="_blank" rel="noreferrer">', after: '</a>' },
+          { label: 'Liste', before: '<ul><li>', after: '</li></ul>' },
+          { label: 'Paragraphe', before: '<p>', after: '</p>' },
+        ].map(({ label, before, after }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => insertAtCursor(before, after)}
+            className="rounded-full border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/60 hover:text-primary"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <Textarea ref={textareaRef} value={value} onChange={(e) => onChange(e.target.value)} rows={6} placeholder="Décris ta boutique, tes valeurs, ce qui fait la différence…" />
+    </div>
+  )
+}
 
 export function ShopSettingsForm({ shop }: ShopSettingsFormProps) {
   const [activeSection, setActiveSection] = useState('general')
+  const [previewMode, setPreviewMode] = useState<'editor' | 'preview'>('preview')
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({
@@ -173,175 +226,309 @@ export function ShopSettingsForm({ shop }: ShopSettingsFormProps) {
     payments: { title: 'Paiements', description: 'Préférences de checkout et annulation.' },
     social: { title: 'Réseaux sociaux', description: 'Liens de contact et réseaux.' },
     seo: { title: 'SEO', description: 'Métadonnées pour la boutique.' },
+    export: { title: 'Export de données', description: 'Télécharge vos données de vente et clients.' },
   }), [])
+
+  const previewStyles = useMemo(() => ({
+    '--primary': form.primary_color ?? '#d4643f',
+    '--primary-dim': `${form.primary_color ?? '#d4643f'}20`,
+    '--primary-border': `${form.primary_color ?? '#d4643f'}40`,
+    '--secondary': form.secondary_color ?? '#00875A',
+    '--accent': form.accent_color ?? '#F5EFE6',
+    '--foreground': form.text_color ?? '#1B2A4A',
+    '--background': form.background_color ?? '#ffffff',
+    '--surface': form.background_color ?? '#ffffff',
+    '--muted-foreground': 'rgba(27, 42, 74, 0.68)',
+    '--border': 'rgba(27, 42, 74, 0.14)',
+  }) as React.CSSProperties, [form.primary_color, form.secondary_color, form.accent_color, form.text_color, form.background_color])
+
+  const LiveShopPreview = () => {
+    const bannerSrc = form.banner_url ?? shop.banner_url ?? ''
+
+    return (
+    <div className="overflow-hidden rounded-[24px] border border-border bg-white shadow-sm" style={previewStyles}>
+      <div className="relative">
+        {form.show_banner && bannerSrc ? (
+          <div className="h-28 w-full overflow-hidden border-b border-border bg-[var(--surface)]">
+            <Image
+              src={bannerSrc}
+              alt="Bannière boutique"
+              width={1200}
+              height={400}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="h-20 w-full" style={{ background: `linear-gradient(135deg, ${form.primary_color ?? '#d4643f'}, ${form.background_color ?? '#ffffff'})` }} />
+        )}
+
+        <div className="px-4 pb-4 pt-3 sm:px-5">
+          <div className="-mt-8 mb-3 flex items-end gap-3">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+              {form.logo_url || shop.logo_url ? (
+                <Image src={form.logo_url ?? shop.logo_url ?? ''} alt={form.name || shop.name} width={64} height={64} className="h-full w-full object-cover" />
+              ) : (
+                <Store size={24} style={{ color: 'var(--primary)' }} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-base font-bold" style={{ color: 'var(--foreground)' }}>{form.name || shop.name}</h3>
+              <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>@{shop.slug}</p>
+            </div>
+          </div>
+
+          {form.description ? (
+            <p className="mb-3 text-xs leading-5" style={{ color: 'var(--muted-foreground)' }}>{form.description}</p>
+          ) : (
+            <p className="mb-3 text-xs leading-5" style={{ color: 'var(--muted-foreground)' }}>Aucune description pour le moment. Ajoute une présentation claire de ta boutique pour rassurer tes clients.</p>
+          )}
+
+          <div className="mb-3 flex flex-wrap gap-2">
+            <span className="rounded-full px-2.5 py-1 text-[10px] font-medium" style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}>4 produits</span>
+            <span className="rounded-full border px-2.5 py-1 text-[10px] font-medium" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>4.8 / 5</span>
+          </div>
+
+          <div className="grid gap-2 rounded-2xl border border-border bg-[var(--surface)] p-3" style={{ background: form.background_color ?? '#ffffff' }}>
+            <div className="flex items-center gap-2 text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+              <Store size={12} style={{ color: 'var(--primary)' }} />
+              Secteur campus • Livraison locale
+            </div>
+            <div className="flex items-center gap-2 text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+              <Search size={12} style={{ color: 'var(--primary)' }} />
+              {form.website_url || 'www.campus-market.com'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {sections.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setActiveSection(id)}
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-all ${activeSection === id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground hover:border-primary/40'}`}
-          >
-            <Icon size={15} />
-            {label}
-          </button>
-        ))}
+      <div className="sticky top-2 z-20 rounded-2xl border border-border bg-background/90 p-2 shadow-sm backdrop-blur-sm md:top-4">
+        <div className="overflow-x-auto md:overflow-visible">
+          <div className="flex min-w-max items-center gap-2">
+            {sections.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveSection(id)}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all sm:text-sm ${activeSection === id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground hover:border-primary/40'}`}
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeSection}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
-        >
-          <Card className="rounded-3xl border border-border">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">{sectionMeta[activeSection as keyof typeof sectionMeta].title}</CardTitle>
-              <p className="text-sm text-muted-foreground">{sectionMeta[activeSection as keyof typeof sectionMeta].description}</p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {activeSection === 'general' && (
-                <>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Nom de la boutique</Label>
-                      <Input value={form.name} onChange={(e) => updateField('name', e.target.value)} required />
+      <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+        <div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <Card className="rounded-3xl border border-border">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">{sectionMeta[activeSection as keyof typeof sectionMeta].title}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{sectionMeta[activeSection as keyof typeof sectionMeta].description}</p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {activeSection === 'appearance' && (
+                    <div className="mb-4 lg:hidden">
+                      <div className="rounded-2xl border border-border bg-background/60 p-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: 'var(--muted-foreground)' }}>Aperçu live</p>
+                        <LiveShopPreview />
+                      </div>
+                    </div>
+                  )}
+                  {activeSection === 'general' && (
+                    <>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Nom de la boutique</Label>
+                        <Input value={form.name} onChange={(e) => updateField('name', e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Slug</Label>
+                        <Input value={form.slug} onChange={(e) => updateField('slug', e.target.value)} required />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Email professionnel</Label>
+                        <Input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Téléphone</Label>
+                        <Input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Slug</Label>
-                      <Input value={form.slug} onChange={(e) => updateField('slug', e.target.value)} required />
+                      <Label>Description</Label>
+                      <RichShopDescriptionEditor value={form.description} onChange={(value) => updateField('description', value)} />
                     </div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Email professionnel</Label>
-                      <Input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Téléphone</Label>
-                      <Input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea value={form.description} onChange={(e) => updateField('description', e.target.value)} rows={4} />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Nom du contact</Label>
-                      <Input value={form.contact_name} onChange={(e) => updateField('contact_name', e.target.value)} />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Nom du contact</Label>
+                        <Input value={form.contact_name} onChange={(e) => updateField('contact_name', e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Téléphone du contact</Label>
+                        <Input value={form.contact_phone} onChange={(e) => updateField('contact_phone', e.target.value)} />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Téléphone du contact</Label>
-                      <Input value={form.contact_phone} onChange={(e) => updateField('contact_phone', e.target.value)} />
+                      <Label>Statut</Label>
+                      <select value={form.status} onChange={(e) => updateField('status', e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <option value="ACTIVE">Active</option>
+                        <option value="PAUSED">En pause</option>
+                        <option value="MAINTENANCE">Maintenance</option>
+                      </select>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Statut</Label>
-                    <select value={form.status} onChange={(e) => updateField('status', e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                      <option value="ACTIVE">Active</option>
-                      <option value="PAUSED">En pause</option>
-                      <option value="MAINTENANCE">Maintenance</option>
-                    </select>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
 
               {activeSection === 'appearance' && (
                 <>
-                  <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Logo</Label>
-                        <ImageUpload value={form.logo_url} onChange={(value) => updateField('logo_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
-                          if (meta === null) {
-                            updateField('logo_media_id', null)
-                            updateField('logo_url', null)
-                            return
-                          }
-                          updateField('logo_media_id', meta.mediaId ?? null)
-                          updateField('logo_url', meta.url ?? null)
-                        }} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Bannière</Label>
-                        <ImageUpload value={form.banner_url} onChange={(value) => updateField('banner_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
-                          if (meta === null) {
-                            updateField('banner_media_id', null)
-                            updateField('banner_url', null)
-                            return
-                          }
-                          updateField('banner_media_id', meta.mediaId ?? null)
-                          updateField('banner_url', meta.url ?? null)
-                        }} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Favicon</Label>
-                        <ImageUpload value={form.favicon_url} onChange={(value) => updateField('favicon_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
-                          if (meta === null) {
-                            updateField('favicon_media_id', null)
-                            updateField('favicon_url', null)
-                            return
-                          }
-                          updateField('favicon_media_id', meta.mediaId ?? null)
-                          updateField('favicon_url', meta.url ?? null)
-                        }} />
-                      </div>
+                  {/* Uploads d'images */}
+                  <div className="space-y-6 pb-6 border-b border-border">
+                    <div>
+                      <h3 className="font-semibold mb-4">Médias de votre boutique</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Personnalisez l'apparence visuelle de votre boutique en ligne. Les images seront affichées sur votre page publique.</p>
                     </div>
-                    <div className="space-y-4">
+
+                    <div className="space-y-2">
+                      <Label className="font-semibold">Logo de la boutique</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Apparaît en haut à gauche sur votre page boutique (carré, 80×80px) • Format: PNG, JPG • Max: 5MB • Recommandé: format carré ou logo avec transparent</p>
+                      <ImageUpload value={form.logo_url} onChange={(value) => updateField('logo_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
+                        if (meta === null) {
+                          updateField('logo_media_id', null)
+                          updateField('logo_url', null)
+                          return
+                        }
+                        updateField('logo_media_id', meta.mediaId ?? null)
+                        updateField('logo_url', meta.url ?? null)
+                      }} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="font-semibold">Bannière de la boutique</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Image de fond en haut de votre page boutique • Format: PNG, JPG • Max: 5MB • Recommandé: 1200×400px (ratio 3:1 large écran)</p>
+                      <ImageUpload value={form.banner_url} onChange={(value) => updateField('banner_url', value)} bucket="shops" shopId={shop.id} onMeta={(meta) => {
+                        if (meta === null) {
+                          updateField('banner_media_id', null)
+                          updateField('banner_url', null)
+                          return
+                        }
+                        updateField('banner_media_id', meta.mediaId ?? null)
+                        updateField('banner_url', meta.url ?? null)
+                      }} />
+                    </div>
+
+
+                  </div>
+
+                  {/* Couleurs */}
+                  <div className="space-y-6 pt-6">
+                    <div>
+                      <h3 className="font-semibold mb-4">Couleurs de votre boutique</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Choisissez les couleurs qui représentent votre marque. Ces couleurs vont s'appliquer à tous les éléments de votre boutique en ligne.</p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Couleur primaire</Label>
-                        <Input type="color" value={form.primary_color ?? '#d4643f'} onChange={(e) => updateField('primary_color', e.target.value)} />
+                        <Label className="font-semibold">Couleur principale</Label>
+                        <p className="text-xs text-muted-foreground mb-2">Boutons, badges, éléments phares. C’est la couleur qui donne l’identité visuelle de la boutique.</p>
+                        <div className="flex gap-2 items-center">
+                          <Input type="color" value={form.primary_color ?? '#d4643f'} onChange={(e) => updateField('primary_color', e.target.value)} className="h-10 w-16" />
+                          <span className="text-sm font-mono text-muted-foreground">{form.primary_color ?? '#d4643f'}</span>
+                        </div>
                       </div>
+
                       <div className="space-y-2">
-                        <Label>Couleur secondaire</Label>
-                        <Input type="color" value={form.secondary_color ?? '#00875A'} onChange={(e) => updateField('secondary_color', e.target.value)} />
+                        <Label className="font-semibold">Fond de la boutique</Label>
+                        <p className="text-xs text-muted-foreground mb-2">Choisis un fond clair pour garder une lecture confortable.</p>
+                        <div className="flex gap-2 items-center">
+                          <Input type="color" value={form.background_color ?? '#ffffff'} onChange={(e) => updateField('background_color', e.target.value)} className="h-10 w-16" />
+                          <span className="text-sm font-mono text-muted-foreground">{form.background_color ?? '#ffffff'}</span>
+                        </div>
                       </div>
+
                       <div className="space-y-2">
-                        <Label>Accent</Label>
-                        <Input type="color" value={form.accent_color ?? '#F5EFE6'} onChange={(e) => updateField('accent_color', e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Texte</Label>
-                        <Input type="color" value={form.text_color ?? '#1B2A4A'} onChange={(e) => updateField('text_color', e.target.value)} />
+                        <Label className="font-semibold">Couleur du texte</Label>
+                        <p className="text-xs text-muted-foreground mb-2">Texte principal de la page boutique. Privilégie un contraste lisible.</p>
+                        <div className="flex gap-2 items-center">
+                          <Input type="color" value={form.text_color ?? '#1B2A4A'} onChange={(e) => updateField('text_color', e.target.value)} className="h-10 w-16" />
+                          <span className="text-sm font-mono text-muted-foreground">{form.text_color ?? '#1B2A4A'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  {/* Options d'affichage */}
+                  <div className="space-y-6 pt-6 border-t border-border">
+                    <div>
+                      <h3 className="font-semibold mb-4">Contenu visible sur votre boutique</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Activez ou désactivez les sections affichées sur votre page boutique publique.</p>
+                    </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="flex items-center justify-between rounded-xl border border-border p-3">
-                      <div>
-                        <p className="font-medium">Afficher la bannière</p>
-                        <p className="text-sm text-muted-foreground">Activer la bannière sur la boutique</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Afficher la bannière</p>
+                          <p className="text-xs text-muted-foreground">La bannière en haut de votre page boutique</p>
+                        </div>
+                        <Switch checked={form.show_banner} onCheckedChange={(value) => updateField('show_banner', value)} />
                       </div>
-                      <Switch checked={form.show_banner} onCheckedChange={(value) => updateField('show_banner', value)} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border border-border p-3">
-                      <div>
-                        <p className="font-medium">Afficher les catégories</p>
-                        <p className="text-sm text-muted-foreground">Montrer les catégories sur la boutique</p>
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Afficher les catégories</p>
+                          <p className="text-xs text-muted-foreground">Section des catégories de produits</p>
+                        </div>
+                        <Switch checked={form.show_categories} onCheckedChange={(value) => updateField('show_categories', value)} />
                       </div>
-                      <Switch checked={form.show_categories} onCheckedChange={(value) => updateField('show_categories', value)} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border border-border p-3">
-                      <div>
-                        <p className="font-medium">Produits mis en avant</p>
-                        <p className="text-sm text-muted-foreground">Afficher la section featured</p>
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Produits mis en avant</p>
+                          <p className="text-xs text-muted-foreground">Section "Produits phares"</p>
+                        </div>
+                        <Switch checked={form.show_featured_products} onCheckedChange={(value) => updateField('show_featured_products', value)} />
                       </div>
-                      <Switch checked={form.show_featured_products} onCheckedChange={(value) => updateField('show_featured_products', value)} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border border-border p-3">
-                      <div>
-                        <p className="font-medium">Nouveaux produits</p>
-                        <p className="text-sm text-muted-foreground">Afficher les nouveautés</p>
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Nouveaux produits</p>
+                          <p className="text-xs text-muted-foreground">Section "Nouveautés"</p>
+                        </div>
+                        <Switch checked={form.show_new_products} onCheckedChange={(value) => updateField('show_new_products', value)} />
                       </div>
-                      <Switch checked={form.show_new_products} onCheckedChange={(value) => updateField('show_new_products', value)} />
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Afficher les avis clients</p>
+                          <p className="text-xs text-muted-foreground">Section "Avis clients"</p>
+                        </div>
+                        <Switch checked={form.show_reviews} onCheckedChange={(value) => updateField('show_reviews', value)} />
+                      </div>
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Afficher les infos de contact</p>
+                          <p className="text-xs text-muted-foreground">Email et téléphone affichés dans la boutique</p>
+                        </div>
+                        <Switch checked={form.show_contact} onCheckedChange={(value) => updateField('show_contact', value)} />
+                      </div>
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
+                        <div>
+                          <p className="font-medium text-sm">Afficher les liens sociaux</p>
+                          <p className="text-xs text-muted-foreground">Section des réseaux sociaux</p>
+                        </div>
+                        <Switch checked={form.show_social_links} onCheckedChange={(value) => updateField('show_social_links', value)} />
+                      </div>
                     </div>
                   </div>
                 </>
@@ -491,10 +678,42 @@ export function ShopSettingsForm({ shop }: ShopSettingsFormProps) {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </AnimatePresence>
+
+                {activeSection === 'export' && <ExportPanel />}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
+        </div>
+
+        {/* Aperçu live à droite sur desktop */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-4">
+         <div className="sticky top-24 space-y-4">
+           <div className="rounded-2xl border border-border bg-background/60 p-3 backdrop-blur-sm">
+             <div className="mb-2 flex items-center justify-between gap-2">
+               <p className="text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: 'var(--muted-foreground)' }}>
+                 Aperçu live
+               </p>
+               <a
+                 href={`/shop/${shop.slug}`}
+                 target="_blank"
+                 rel="noreferrer"
+                 className="rounded-full border border-border bg-background px-2 py-1 text-[10px] font-medium transition-opacity hover:opacity-75"
+                 style={{ color: 'var(--primary)' }}
+               >
+                 Ouvrir
+               </a>
+             </div>
+             <div className="max-h-[700px] overflow-hidden rounded-[16px] bg-white p-2 shadow-sm">
+               <LiveShopPreview />
+             </div>
+             <p className="mt-2 text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+               Les changements s’appliquent en direct dans cette prévisualisation.
+             </p>
+           </div>
+         </div>
+        </div>
+      </div>
 
       <div className="flex items-center justify-between rounded-2xl border border-border bg-background/70 p-4">
         <div>

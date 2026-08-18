@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Home, Store, ShoppingCart, Heart, User } from 'lucide-react'
@@ -66,8 +67,8 @@ export function BottomNav() {
         return
       }
 
-      let name = profile.name ?? profile.email
-      let avatarUrl = profile.avatar_url ?? null
+      const name = profile.name ?? profile.email
+      const avatarUrl = profile.avatar_url ?? null
       const initials = name
         .split(' ')
         .map((w: string) => w[0])
@@ -92,6 +93,10 @@ export function BottomNav() {
     { name: 'Favoris', href: '/account/favorites', icon: Heart },
     { name: 'Compte', href: '/account', icon: User },
   ]
+
+  // L'espace vendeur a sa propre navigation mobile dédiée (SellerNav) : les
+  // raccourcis acheteur (panier, favoris...) n'ont pas de sens dans ce contexte.
+  if (pathname.startsWith('/seller')) return null
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
@@ -127,8 +132,13 @@ export function BottomNav() {
                 {item.name === 'Compte' && userProfile ? (
                   <Avatar className={cn('w-6 h-6 border transition-colors', isActive ? 'border-[#A3E635]' : 'border-transparent')}>
                     {userProfile.avatarUrl ? (
-                      // Using img directly inside avatar to match simple fallback style
-                      <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      <Image
+                        src={userProfile.avatarUrl}
+                        alt="Avatar"
+                        width={24}
+                        height={24}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <AvatarFallback className="text-[10px] font-bold"
                         style={{

@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { PackageIcon, ClockIcon, CheckCircleIcon, TruckIcon, XCircleIcon } from '@/components/ServerIcons'
 
 async function getSellerOrders(userId: string) {
   try {
@@ -47,11 +47,11 @@ const STATUS_MAP: Record<string, {
   color: string
   icon: React.ElementType
 }> = {
-  PENDING:   { label: 'En attente', color: '#F59E0B', icon: Clock },
-  SHIPPED:   { label: 'Expédié',    color: '#3B82F6', icon: Truck },
-  DELIVERED: { label: 'Livré',      color: '#10B981', icon: CheckCircle },
-  COMPLETED: { label: 'Complété',   color: '#10B981', icon: CheckCircle },
-  CANCELLED: { label: 'Annulé',     color: '#F87171', icon: XCircle },
+  PENDING:   { label: 'En attente', color: '#F59E0B', icon: ClockIcon },
+  SHIPPED:   { label: 'Expédié',    color: '#3B82F6', icon: TruckIcon },
+  DELIVERED: { label: 'Livré',      color: '#10B981', icon: CheckCircleIcon },
+  COMPLETED: { label: 'Complété',   color: '#10B981', icon: CheckCircleIcon },
+  CANCELLED: { label: 'Annulé',     color: '#F87171', icon: XCircleIcon },
 }
 
 export default async function SellerOrdersPage() {
@@ -136,7 +136,7 @@ export default async function SellerOrdersPage() {
                               className="object-cover w-full h-full"
                             />
                           ) : (
-                            <Package size={18} style={{ color: 'var(--subtle)' }} />
+                            <PackageIcon size={18} style={{ color: 'var(--subtle)' }} />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">

@@ -12,13 +12,13 @@ export async function proxy(request: NextRequest) {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            const opts = { ...options, secure: process.env.NODE_ENV === 'production' ? options.secure : false }
             request.cookies.set(name, value)
+            void options
           })
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) => {
-            const opts = { ...options, secure: process.env.NODE_ENV === 'production' ? options.secure : false }
-            supabaseResponse.cookies.set(name, value, opts)
+            const cookieOptions = { ...options, secure: process.env.NODE_ENV === 'production' ? options.secure : false }
+            supabaseResponse.cookies.set(name, value, cookieOptions)
           })
         },
       },

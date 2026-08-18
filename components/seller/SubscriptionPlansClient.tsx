@@ -5,63 +5,21 @@ import { Check, Star, Zap, Crown, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { SUBSCRIPTION_PLANS, type SubscriptionPlan } from '@/lib/subscription-plans'
 
-type PlanConfig = {
-  id: string
-  name: string
-  price: string
-  description: string
-  features: string[]
-  icon: React.ElementType
+const PLAN_ICONS: Record<SubscriptionPlan, React.ElementType> = {
+  DECOUVERTE: Star,
+  STARTER: Zap,
+  BUSINESS: Crown,
+  PRO: Crown,
 }
 
-function getPlanCapabilities(planId: string) {
-  switch (planId) {
-    case 'STARTER':
-      return { limitLabel: '10 produits actifs max', isUnlimited: false }
-    case 'BUSINESS':
-    case 'PRO':
-      return { limitLabel: 'Produits illimités', isUnlimited: true }
-    case 'DECOUVERTE':
-    default:
-      return { limitLabel: '3 produits actifs max', isUnlimited: false }
-  }
+function formatCommission(rate: number) {
+  if (rate === 0) return '0%'
+  // Affiche une décimale seulement si nécessaire (0.015 → "1,5%", 0.05 → "5%")
+  const percent = rate * 100
+  return `${Number.isInteger(percent) ? percent : percent.toFixed(1).replace('.', ',')}%`
 }
-
-const PLANS: PlanConfig[] = [
-  {
-    id: 'DECOUVERTE',
-    name: 'Découverte',
-    price: 'Gratuit',
-    description: 'Idéal pour tester la plateforme',
-    features: ['3 produits actifs max', 'Visibilité standard', 'Support par email'],
-    icon: Star,
-  },
-  {
-    id: 'STARTER',
-    name: 'Starter',
-    price: '500 FCFA / mois',
-    description: 'Pour les vendeurs réguliers',
-    features: ['10 produits actifs', 'Visibilité prioritaire', 'Statistiques de base', 'Support prioritaire'],
-    icon: Zap,
-  },
-  {
-    id: 'BUSINESS',
-    name: 'Business',
-    price: '1000 FCFA / mois',
-    description: 'Pour développer vos ventes',
-    features: ['Produits illimités', 'Visibilité maximale', 'Outils promotionnels', 'Statistiques avancées', 'Support WhatsApp'],
-    icon: Crown,
-  },
-  {
-    id: 'PRO',
-    name: 'Pro',
-    price: 'Sur mesure',
-    description: 'Pour les très grandes boutiques',
-    features: ['Tout en illimité', 'Accompagnement dédié', 'Mise en avant sur l\'accueil', 'API d\'intégration'],
-    icon: Crown,
-  },
-]
 
 export function SubscriptionPlansClient({ 
   currentPlan, 
@@ -109,7 +67,7 @@ export function SubscriptionPlansClient({
 
       // Otherwise show a friendly error to the user
       setError(data.error || 'Transaction échouée. Veuillez réessayer.')
-    } catch (err) {
+    } catch {
       setError('Erreur réseau. Veuillez réessayer.')
     } finally {
       setLoadingPlan(null)
@@ -136,7 +94,7 @@ export function SubscriptionPlansClient({
       } else {
         setError(data.error || 'Impossible de résilier votre abonnement.')
       }
-    } catch (err) {
+    } catch {
       setError('Erreur réseau. Veuillez réessayer.')
     } finally {
       setLoadingPlan(null)
@@ -152,7 +110,7 @@ export function SubscriptionPlansClient({
         if (mounted && data?.success && data.subscription) {
           setPlanState({ plan: data.subscription.plan ?? currentPlan, expiresAt: data.subscription.expiresAt ?? expiresAt })
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -162,7 +120,7 @@ export function SubscriptionPlansClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-surface border border-border rounded-xl p-6 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--surface)] border border-border rounded-xl p-6 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Abonnements</h1>
           <p className="text-sm text-muted-foreground">Choisissez le plan adapté à votre boutique. Vous pouvez changer à tout moment.</p>
@@ -174,7 +132,10 @@ export function SubscriptionPlansClient({
               <div className="text-xs text-muted-foreground">Votre plan actuel</div>
               <div className="font-semibold text-foreground">{planState.plan || currentPlan}</div>
               <div className="text-xs text-muted-foreground">
-                {getPlanCapabilities(planState.plan || currentPlan).limitLabel}
+                {(() => {
+                  const config = SUBSCRIPTION_PLANS[(planState.plan || currentPlan) as SubscriptionPlan] ?? SUBSCRIPTION_PLANS.DECOUVERTE
+                  return config.maxProducts === null ? 'Produits illimités' : `${config.maxProducts} produits actifs max`
+                })()}
               </div>
               {planState.expiresAt ? (
                 <div className="text-xs text-muted-foreground">Expire le {new Date(planState.expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
@@ -240,9 +201,9 @@ export function SubscriptionPlansClient({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {PLANS.map((plan) => {
+        {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
           const isCurrent = planState.plan === plan.id
-          const Icon = plan.icon
+          const Icon = PLAN_ICONS[plan.id]
 
           return (
             <Card
@@ -268,18 +229,22 @@ export function SubscriptionPlansClient({
                   <Icon className={cn('w-6 h-6', isCurrent ? 'text-primary' : 'text-muted-foreground')} />
                 </div>
                 <div className="space-y-2">
-                  <CardTitle className="text-foreground">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardTitle className="text-foreground">{plan.label}</CardTitle>
+                  <CardDescription>
+                    {plan.commissionRate === 0
+                      ? 'Commission 0% — tu gardes 100% de tes ventes'
+                      : `Commission ${formatCommission(plan.commissionRate)} sur chaque vente`}
+                  </CardDescription>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-6 pt-0 pb-4">
                 <div>
-                  <span className="text-3xl font-extrabold text-foreground">{plan.price}</span>
+                  <span className="text-3xl font-extrabold text-foreground">{plan.priceLabel}</span>
                 </div>
 
                 <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm font-medium text-foreground">
-                  {getPlanCapabilities(plan.id).limitLabel}
+                  {plan.maxProducts === null ? 'Produits illimités' : `${plan.maxProducts} produits actifs max`}
                 </div>
 
                 <ul className="space-y-3">

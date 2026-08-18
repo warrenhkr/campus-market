@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp, Calendar, Banknote, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { TrendingUp, Calendar, Banknote, Clock, CheckCircle, XCircle } from '@/components/ServerIcons'
 
 async function getEarningsData(userId: string) {
   const seller = await prisma.seller.findUnique({
@@ -14,27 +14,30 @@ async function getEarningsData(userId: string) {
 
   const shopIds = seller.shops.map(s => s.id)
 
-  // Récupère tous les paiements liés aux commandes contenant des produits du vendeur
-  const payments = await prisma.payment.findMany({
-    where: {
-      order: {
-        order_items: {
-          some: { product: { shop_id: { in: shopIds } } }
-        }
-      }
-    },
+  // Un paiement peut couvrir plusieurs boutiques à la fois (panier
+  // multi-vendeurs) — payment_splits donne la part exacte de CE vendeur dans
+  // chaque paiement, pas le total englobant les autres vendeurs de la même commande.
+  const splits = await prisma.paymentSplit.findMany({
+    where: { shop_id: { in: shopIds } },
     include: {
-      order: {
+      payment: {
         select: {
           id: true,
-          order_date: true,
           status: true,
-          order_items: {
-            where: { product: { shop_id: { in: shopIds } } },
-            include: { product: { select: { name: true } } },
+          created_at: true,
+          order: {
+            select: {
+              id: true,
+              order_date: true,
+              status: true,
+              order_items: {
+                where: { product: { shop_id: { in: shopIds } } },
+                include: { product: { select: { name: true } } },
+              },
+            },
           },
-        }
-      }
+        },
+      },
     },
     orderBy: { created_at: 'desc' },
   })
@@ -42,13 +45,25 @@ async function getEarningsData(userId: string) {
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const totalEarnings = payments
-    .filter(p => p.status === 'CAPTURED')
-    .reduce((sum, p) => sum + Number(p.seller_earning), 0)
+  const totalEarnings = splits
+    .filter(s => s.payment.status === 'CAPTURED')
+    .reduce((sum, s) => sum + Number(s.seller_earning), 0)
 
-  const monthEarnings = payments
-    .filter(p => p.status === 'CAPTURED' && new Date(p.created_at) >= startOfMonth)
-    .reduce((sum, p) => sum + Number(p.seller_earning), 0)
+  const monthEarnings = splits
+    .filter(s => s.payment.status === 'CAPTURED' && new Date(s.created_at) >= startOfMonth)
+    .reduce((sum, s) => sum + Number(s.seller_earning), 0)
+
+  // "payments" garde la forme attendue par le reste de la page (un paiement =
+  // une ligne affichée), en substituant le montant global par la part de ce
+  // vendeur (seller_earning du split, pas celui du Payment entier).
+  const payments = splits.map((s) => ({
+    id: s.payment.id,
+    status: s.payment.status,
+    created_at: s.payment.created_at,
+    amount: s.amount,
+    seller_earning: s.seller_earning,
+    order: s.payment.order,
+  }))
 
   return { payments, totalEarnings, monthEarnings }
 }
@@ -166,7 +181,7 @@ export default async function SellerEarningsPage() {
                   const firstProduct = payment.order.order_items[0]?.product
                   return (
                     <tr key={payment.id} style={{ borderBottom: '1px solid var(--border)' }}
-                      className="hover:bg-gray-50/50 transition-colors">
+                      className="hover:bg-[var(--surface-2)] transition-colors">
                       <td className="px-6 py-4 text-xs" style={{ color: 'var(--muted-foreground)' }}>
                         {new Date(payment.created_at).toLocaleDateString('fr-FR', {
                           day: '2-digit', month: 'short', year: 'numeric'

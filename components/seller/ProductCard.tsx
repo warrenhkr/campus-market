@@ -9,7 +9,17 @@ import { Eye, EyeOff, Edit, Package } from 'lucide-react'
 interface Category { id: string; name: string }
 
 interface ProductProps {
-  product: any
+  product: {
+    id: string
+    name: string
+    price: number | string
+    stock: number
+    status: string
+    is_available: boolean
+    image_url: string | null
+    type: 'PHYSICAL' | 'DIGITAL'
+    category?: Category | null
+  }
   index?: number
 }
 

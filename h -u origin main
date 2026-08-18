@@ -1,0 +1,10 @@
+* [33m6badd7e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/storemedia-pr[m[33m, [m[1;31morigin/feat/storemedia-pr[m[33m)[m feat(media): persist mediaId for logo/banner/favicon; docs
+* [33m1d9bd96[m feat(media): store media + OG image lifecycle (StoreMedia, upload, delete, settings)
+* [33mc8f94fa[m[33m ([m[1;32mfeature/frontend-passation-ui[m[33m, [m[1;32mfeature/backend-passation-flow[m[33m, [m[1;32mdevelop/passation[m[33m, [m[1;32mchore/passation-documentation[m[33m)[m feat(ui): refonte design auth, correction onboarding et ajout de la doc
+* [33m220433b[m fix: use upsert in saveOnboarding (Google users have no row in public.users) + detailed error logging
+* [33meff974a[m fix: add try/catch on onboarding Prisma query to prevent 500 on Vercel
+* [33md104a95[m feat(onboarding): université/faculté/filière après connexion
+* [33mf198ab0[m fix(auth): dynamic redirect for Google OAuth
+* [33ma868306[m fix(prisma): sync ProcessedWebhook model between frontend and admin
+* [33m3fef938[m wip: sync etat actuel avant sync prisma
+* [33m17046da[m fix(webhook): securisation et correction du webhook FedaPay

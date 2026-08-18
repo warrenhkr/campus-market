@@ -3,15 +3,11 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GraduationCap, ChevronDown, Loader2 } from 'lucide-react'
+import { GraduationCap, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { saveOnboarding } from '@/actions/auth'
 import { ETABLISSEMENTS_BENIN } from '@/lib/data/etablissements-benin'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-
-// Constantes dérivées pour les types
-type Universite = (typeof ETABLISSEMENTS_BENIN)[number]
-type Faculte = Universite['facultes'][number]
 
 export function OnboardingForm() {
   const router = useRouter()
@@ -84,27 +80,6 @@ export function OnboardingForm() {
   }
 
   // ── Style helpers ──────────────────────────────────────────────────────────
-  const selectStyle: React.CSSProperties = {
-    background: 'var(--surface-2)',
-    border: '1px solid var(--border)',
-    color: 'var(--foreground)',
-    borderRadius: '0.75rem',
-    padding: '0 2.75rem 0 0.875rem',
-    height: '2.75rem',
-    width: '100%',
-    fontSize: '0.875rem',
-    appearance: 'none',
-    WebkitAppearance: 'none',
-    outline: 'none',
-    cursor: 'pointer',
-  }
-
-  const disabledSelectStyle: React.CSSProperties = {
-    ...selectStyle,
-    opacity: 0.4,
-    cursor: 'not-allowed',
-  }
-
   const inputStyle: React.CSSProperties = {
     background: 'var(--surface-2)',
     border: '1px solid var(--border)',

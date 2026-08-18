@@ -62,15 +62,26 @@ async function configureCloudinaryAndGetClient(cloudName: string) {
   return cloudinary
 }
 
-async function uploadSigned(buffer: Buffer, folder: string, cloudName: string) {
+interface CloudinaryUploadResult {
+  public_id: string
+  secure_url?: string
+  url?: string
+  resource_type?: string
+  format?: string
+  width?: number
+  height?: number
+  bytes?: number
+}
+
+async function uploadSigned(buffer: Buffer, folder: string, cloudName: string, resourceType: string) {
   const cloudinary = await configureCloudinaryAndGetClient(cloudName)
 
-  return new Promise<any>((resolve, reject) => {
-    const options: Record<string, string> = { folder }
+  return new Promise<CloudinaryUploadResult>((resolve, reject) => {
+    const options: Record<string, string> = { folder, resource_type: resourceType }
 
     const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
       if (error) return reject(error)
-      resolve(result)
+      resolve(result as CloudinaryUploadResult)
     })
 
     uploadStream.end(buffer)
@@ -99,10 +110,15 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer())
   const fileName = file.name || 'upload'
   const mimeType = file.type || 'application/octet-stream'
+  const resourceType = mimeType.startsWith('video/') ? 'video' : 'image'
 
   if (hasSignedCloudinaryCredentials()) {
     try {
-      const result = await uploadSigned(buffer, folder, cloudName)
+      const result = await uploadSigned(buffer, folder, cloudName, resourceType)
+      const resultUrl = result.secure_url ?? result.url
+      if (!resultUrl) {
+        throw new Error('Cloudinary n’a renvoyé aucune URL pour le fichier uploadé.')
+      }
       // Persist media metadata in the database when possible
       let mediaRecord = null
       try {
@@ -111,9 +127,9 @@ export async function POST(req: NextRequest) {
             shop_id: shopId,
             uploader_id: uploaderId,
             public_id: result.public_id,
-            url: result.secure_url ?? result.url,
-            resource_type: result.resource_type,
-            format: result.format,
+            url: resultUrl,
+            resource_type: result.resource_type ?? resourceType,
+            format: result.format ?? '',
             width: result.width ?? null,
             height: result.height ?? null,
             bytes: result.bytes ?? null,
@@ -124,7 +140,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({
-        url: result.secure_url ?? result.url,
+        url: resultUrl,
         public_id: result.public_id,
         resource_type: result.resource_type,
         format: result.format,
@@ -133,12 +149,10 @@ export async function POST(req: NextRequest) {
         bytes: result.bytes,
         mediaId: mediaRecord?.id ?? null,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Cloudinary signed upload error:', error)
-      return NextResponse.json(
-        { error: error?.message ?? 'Échec de l’upload Cloudinary avec identifiants.' },
-        { status: 500 }
-      )
+      const message = error instanceof Error ? error.message : 'Échec de l’upload Cloudinary avec identifiants.'
+      return NextResponse.json({ error: message }, { status: 500 })
     }
   }
 
@@ -156,8 +170,9 @@ export async function POST(req: NextRequest) {
   unsignedForm.append('file', new Blob([buffer], { type: mimeType }), fileName)
   unsignedForm.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
   unsignedForm.append('folder', folder)
+  unsignedForm.append('resource_type', resourceType)
 
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
     method: 'POST',
     body: unsignedForm,
   })

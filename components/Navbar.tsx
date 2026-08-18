@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
   ShoppingBag, Search, Menu, X, User, LogOut,
-  LayoutDashboard, Package, Heart, ShoppingCart, Store,
+  LayoutDashboard, Package, Heart, ShoppingCart,
 } from 'lucide-react'
 import { NotificationBell } from './NotificationBell'
 import { Button } from '@/components/ui/button'
@@ -131,7 +131,7 @@ export function Navbar() {
           : 'bg-transparent border-b border-transparent'
       )}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-2 sm:px-4 lg:px-14">
         <div className="flex items-center h-16 gap-5">
 
           {/* Logo */}

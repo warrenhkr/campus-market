@@ -3,6 +3,25 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { shopSettingsSchema } from '@/lib/validators/shop-settings'
 
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 })
+  }
+
+  const seller = await prisma.seller.findUnique({
+    where: { user_id: user.id },
+    include: { shops: { select: { id: true, name: true, slug: true, logo_url: true }, orderBy: { created_at: 'asc' } } },
+  })
+  if (!seller) {
+    return NextResponse.json({ error: 'Vendeur introuvable.' }, { status: 403 })
+  }
+
+  return NextResponse.json({ shops: seller.shops })
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

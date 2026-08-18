@@ -1,32 +1,29 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveShop } from '@/lib/active-shop'
 import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Store, Edit, ArrowRight, Settings2, Star } from 'lucide-react'
+import { Store, Edit, ArrowRight, Settings2, Star } from '@/components/ServerIcons'
 import { ShopSettingsForm } from '@/components/seller/ShopSettingsForm'
+import { ShareLinkButton } from '@/components/ShareLinkButton'
 
-async function getSellerShop(userId: string) {
+async function getShopDetails(shopId: string) {
   try {
-    const seller = await prisma.seller.findUnique({
-      where: { user_id: userId },
+    return await prisma.shop.findUnique({
+      where: { id: shopId },
       include: {
-        shops: {
-          include: {
-            products: {
-              where: { status: 'APPROVED', is_available: true },
-              include: { reviews: true },
-              orderBy: { created_at: 'desc' },
-            },
-          },
+        products: {
+          where: { status: 'APPROVED', is_available: true },
+          include: { reviews: true },
+          orderBy: { created_at: 'desc' },
         },
       },
     })
-    return seller
   } catch {
     return null
   }
@@ -37,10 +34,10 @@ export default async function SellerShopPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const seller = await getSellerShop(user.id)
+  const { seller, shop: activeShop } = await getActiveShop(user.id)
   if (!seller) redirect('/become-seller')
 
-  const shop = seller.shops[0]
+  const shop = activeShop ? await getShopDetails(activeShop.id) : null
 
   if (!shop) {
     return (
@@ -61,7 +58,7 @@ export default async function SellerShopPage() {
     )
   }
 
-  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/seller/shop/${shop.slug}`
+  const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/shop/${shop.slug}`
   const shopSettingsPayload = shop as unknown as Record<string, unknown>
 
   const totalReviews = shop.products.flatMap(p => p.reviews)
@@ -70,7 +67,7 @@ export default async function SellerShopPage() {
     : 0
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="w-full px-4 pb-12 pt-4 sm:px-6 lg:px-8 md:pt-5">
 
       {/* Header boutique */}
       <AnimatedSection delay={0}>
@@ -113,7 +110,10 @@ export default async function SellerShopPage() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <span>/ {shop.slug}</span>
-                  <span>Magasin {shopUrl}</span>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="truncate text-xs" style={{ color: 'var(--muted-foreground)' }}>{shopUrl}</span>
+                  <ShareLinkButton url={shopUrl} />
                 </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default async function SellerShopPage() {
             <div className="flex flex-col gap-3 shrink-0">
               <Button asChild variant="secondary" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
                 style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-                <Link href={`/seller/shop/${shop.slug}`}>
+                <Link href={`/shop/${shop.slug}`}>
                   Voir la boutique <ArrowRight size={12} />
                 </Link>
               </Button>

@@ -1,6 +1,7 @@
-(async () => {
+import 'dotenv/config'
+
+;(async () => {
   try {
-    require('dotenv').config()
     const originalCloudinaryUrl = process.env.CLOUDINARY_URL
     if (originalCloudinaryUrl && !originalCloudinaryUrl.startsWith('cloudinary://')) {
       delete process.env.CLOUDINARY_URL

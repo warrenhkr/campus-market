@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 
 function formatPlanLabel(plan: string | null | undefined) {
   switch (plan) {
@@ -111,7 +112,7 @@ function PaymentResultContent() {
             setMessage('Le paiement est validé. Nous finalisons l’activation de votre abonnement…')
           }
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
 
@@ -125,7 +126,7 @@ function PaymentResultContent() {
 
     poll()
     return () => { stopped = true }
-  }, [id, pendingPlan, statusParam])
+  }, [id, pendingPlan, statusParam, planParam])
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4">
@@ -152,13 +153,16 @@ function PaymentResultContent() {
 
           <div className="rounded-lg border border-border p-4">
             <div className="text-sm text-muted-foreground">Abonnement actuel</div>
-            <div className="mt-1 text-xl font-semibold">{serverPlan ? formatPlanLabel(serverPlan) : 'Mise à jour en cours…'}</div>
+            <div className="mt-1 flex items-center gap-2 text-xl font-semibold">
+              {serverPlan ? formatPlanLabel(serverPlan) : 'Mise à jour en cours…'}
+              {checking && <Loader2 size={16} className="animate-spin text-muted-foreground" />}
+            </div>
           </div>
 
           {message && <div className="text-sm text-muted-foreground">{message}</div>}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button variant="outline" onClick={() => (window.location.href = '/')}>Retour à l'accueil</Button>
+            <Button variant="outline" onClick={() => (window.location.href = '/')}>Retour à l&apos;accueil</Button>
             <Button onClick={() => (window.location.href = '/seller')}>Ouvrir le tableau de bord</Button>
           </div>
         </CardContent>
