@@ -16,6 +16,7 @@ async function getSellerData(userId: string) {
           products: true,
         },
       },
+      user: { select: { name: true, email: true, university: true } },
     },
   })
 
@@ -112,6 +113,11 @@ export default async function SellerDashboardPage() {
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
               {seller.shop_name} — Bienvenue sur ton espace vendeur
             </p>
+            {seller.user?.university && (
+              <p className="text-xs text-muted-foreground" style={{ color: 'var(--muted-foreground)' }}>
+                Université : {seller.user.university}
+              </p>
+            )}
           </div>
           <Button asChild>
             <Link href="/seller/products/new" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105"

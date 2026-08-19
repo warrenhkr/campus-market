@@ -39,7 +39,18 @@
 
 - [x] Documentation ajoutée dans SELLER_PAYMENT_AND_PREVIEW_PLAN.md.
 - [x] Points couverts : règles vendeur, retrait, remboursement, modération, conformité locale.
+- [x] Documentation de base ajoutée dans docs/politique-confidentialite-et-regles-vendeur.md.
 - [ ] Finaliser et afficher les politiques dans l'interface publique/admin avant lancement.
+- [ ] Ajouter les pages d'affichage public des conditions générales, confidentialité et règles vendeur.
+
+## 5b) Finalisation de la phase paiement vendeur / mode live
+
+- [x] Le plan de finalisation est documenté dans SELLER_PAYMENT_AND_PREVIEW_PLAN.md.
+- [x] Les demandes de retrait vendeur, KYC et signalements sont déjà en place au niveau de base.
+- [x] Préparer le switch de paiement FedaPay live via un panneau admin sécurisé.
+- [x] Enregistrer le mode sandbox/live dans un config serveur ou en variables d'environnement et verrouiller le mode live derrière validation admin.
+- [x] Définir l’UX admin pour activer le live, stocker les clés et tester la configuration sans activer la production tant que la validation n’est pas faite.
+- [ ] Connecter le panneau live au stockage réel des clés si le projet passe en environnement multi-tenant / production.
 
 ## 6) Affichage produit / preview vendeur
 

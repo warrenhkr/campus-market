@@ -189,7 +189,7 @@ async function getProduct(id: string) {
         shop: {
           include: {
             seller: {
-              include: { user: { select: { name: true, email: true } } }
+              include: { user: { select: { name: true, email: true, university: true } } }
             },
             products: {
               where: { status: 'APPROVED', is_available: true },
@@ -532,6 +532,11 @@ export default async function ProductDetailPage({
                   <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                     {product.shop.products.length} produit{product.shop.products.length > 1 ? 's' : ''} en vente
                   </p>
+                  {product.shop?.seller?.user?.name && (
+                    <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
+                      Vendu par {product.shop.seller.user.name}{product.shop.seller.user.university ? ` — Université : ${product.shop.seller.user.university}` : ''}
+                    </p>
+                  )}
                 </div>
                 <ArrowLeft size={14} className="ml-auto rotate-180 flex-shrink-0"
                   style={{ color: 'var(--muted-foreground)' }} />

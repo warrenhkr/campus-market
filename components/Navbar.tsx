@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import {
   ShoppingBag, Search, Menu, X, User, LogOut,
   LayoutDashboard, Package, Heart, ShoppingCart,
+  ShieldCheck, CreditCard,
 } from 'lucide-react'
 import { NotificationBell } from './NotificationBell'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ interface UserProfile {
   name: string | null
   email: string
   role: Role
+  university?: string | null
 }
 
 const menuByRole: Record<string, { href: string; label: string; icon: React.ElementType }[]> = {
@@ -42,9 +44,10 @@ const menuByRole: Record<string, { href: string; label: string; icon: React.Elem
     { href: '/seller/products', label: 'Mes produits', icon: Package },
   ],
   ADMIN: [
+    { href: '/admin/reports',  label: 'Modération', icon: ShieldCheck },
+    { href: '/admin/payments', label: 'Paiements',  icon: CreditCard },
     { href: '/products',       label: 'Produits',   icon: Package },
     { href: '/account',        label: 'Mon compte', icon: LayoutDashboard },
-    { href: '/account/orders', label: 'Commandes',  icon: ShoppingCart },
   ],
 }
 
@@ -212,6 +215,17 @@ export function Navbar() {
                         background: 'var(--surface-2)',
                         border: '1px solid var(--border)',
                       }}>
+                      {/* Profile summary */}
+                      <div className="px-3 py-2">
+                        <p className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+                          {profile?.name ?? profile?.email}
+                        </p>
+                        {profile?.university ? (
+                          <p className="text-xs text-muted-foreground" style={{ marginTop: 2 }}>
+                            Université: {profile.university}
+                          </p>
+                        ) : null}
+                      </div>
                       <DropdownMenuItem asChild>
                         <Link
                           href="/account"
@@ -231,6 +245,18 @@ export function Navbar() {
                           >
                             <LayoutDashboard size={14} className="mr-2" />
                             Dashboard vendeur
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {profile.role === 'ADMIN' && (
+                        <DropdownMenuItem asChild>
+                          <Link
+                            href="/admin/reports"
+                            className="cursor-pointer"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            <ShieldCheck size={14} className="mr-2" />
+                            Modération admin
                           </Link>
                         </DropdownMenuItem>
                       )}
