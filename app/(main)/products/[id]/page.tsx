@@ -7,10 +7,178 @@ import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
 import { AddToCartButton } from '@/components/AddToCartButton'
 import { FavoriteButton } from '@/components/FavoriteButton'
+import { ProductPromoCard } from '../../../../components/ProductPromoCard'
 import {
   ArrowLeft, Store, Package, Star,
-  ShoppingCart, Share2, CheckCircle,
-} from 'lucide-react'
+  ShoppingCart, CheckCircle,
+} from '@/components/ServerIcons'
+import { ShareButton } from '@/components/ShareButton'
+import { RichTextRenderer } from '@/components/RichTextRenderer'
+import { ProductReviews } from '@/components/ProductReviews'
+import { ProductGalleryCarousel } from '@/components/ProductGalleryCarousel'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+
+type SalesPageSectionType = 'hero' | 'text' | 'feature_list' | 'faq' | 'cta'
+
+interface SectionItem {
+  title?: string
+  description?: string
+  question?: string
+  answer?: string
+  [key: string]: unknown
+}
+
+type SectionContent = {
+  headline?: string
+  subheadline?: string
+  imageUrl?: string
+  ctaText?: string
+  ctaUrl?: string
+  ctaColor?: string
+  buttonText?: string
+  buttonUrl?: string
+  title?: string
+  body?: string
+  items?: Array<SectionItem>
+}
+
+interface ProductSalesPageSection {
+  id?: string
+  type: SalesPageSectionType
+  isVisible?: boolean
+  content: SectionContent
+}
+
+interface ProductMetadata {
+  visibility?: {
+    showStock?: boolean
+    showRelatedProducts?: boolean
+  }
+  gallery?: Array<string | null | undefined>
+  salesPage?: {
+    ctaColor?: string
+    hero?: {
+      headline?: string
+      subheadline?: string
+      imageUrl?: string
+      ctaText?: string
+      ctaUrl?: string
+    }
+    body?: string
+    sections?: ProductSalesPageSection[]
+  }
+  availability?: {
+    note?: string
+  }
+  delivery?: Record<string, unknown>
+}
+
+function getSectionItems(content: SectionContent): SectionItem[] {
+  const items = content.items
+  return Array.isArray(items) ? items : []
+}
+
+function renderSalesPageSection(section: ProductSalesPageSection) {
+  const { type, content } = section
+  const sectionItems = getSectionItems(content)
+  switch (type) {
+    case 'hero':
+      return (
+        <div className="rounded-3xl overflow-hidden border border-border bg-[var(--surface)]">
+          {content.imageUrl ? (
+            <div className="relative h-72 sm:h-96">
+              <Image src={content.imageUrl} alt={content.headline ?? 'Hero'} fill className="object-cover" />
+            </div>
+          ) : null}
+          <div className="p-8">
+            <h2 className="text-3xl font-extrabold mb-3" style={{ color: 'var(--foreground)' }}>
+              {content.headline ?? 'Titre de la section'}
+            </h2>
+            <p className="text-sm leading-7 text-muted-foreground mb-5">
+              {content.subheadline ?? 'Sous-titre de présentation.'}
+            </p>
+            {content.ctaUrl && content.ctaText ? (
+              <Link
+                href={content.ctaUrl}
+                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold transition"
+                style={
+                  content.ctaColor
+                    ? { background: content.ctaColor, color: 'var(--primary-foreground)' }
+                    : undefined
+                }
+              >
+                {content.ctaText}
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      )
+
+    case 'text':
+      return (
+        <div className="rounded-3xl border border-border bg-[var(--surface)] p-8">
+          <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--foreground)' }}>
+            {content.title ?? 'Titre de section'}
+          </h3>
+          <p className="text-sm leading-7 text-muted-foreground">
+            {content.body ?? 'Contenu de section.'}
+          </p>
+        </div>
+      )
+
+    case 'feature_list':
+      return (
+        <div className="rounded-3xl border border-border bg-[var(--surface)] p-8">
+          <h3 className="text-xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>
+            {content.title ?? 'Ce que ton produit apporte'}
+          </h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            {sectionItems.map((item, index) => (
+              <div key={index} className="rounded-3xl border border-border bg-[var(--surface-2)] p-5">
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{item.title ?? `Avantage ${index + 1}`}</p>
+                <p className="text-sm text-muted-foreground">{item.description ?? 'Description du bénéfice.'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'faq':
+      return (
+        <div className="rounded-3xl border border-border bg-[var(--surface)] p-8">
+          <h3 className="text-xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>
+            {content.title ?? 'Foire aux questions'}
+          </h3>
+          <div className="space-y-4">
+            {sectionItems.map((item, index) => (
+              <div key={index} className="rounded-3xl border border-border bg-[var(--surface-2)] p-5">
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{item.question ?? `Question ${index + 1}`}</p>
+                <p className="text-sm text-muted-foreground">{item.answer ?? 'Réponse à la question.'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
+    case 'cta':
+      return (
+        <div className="rounded-3xl border border-border bg-primary p-8 text-primary-foreground">
+          <h3 className="text-2xl font-bold mb-3">{content.headline ?? 'Prêt à agir ?'}</h3>
+          {content.buttonUrl && content.buttonText ? (
+            <Link href={content.buttonUrl} className="inline-flex items-center justify-center rounded-2xl bg-primary-foreground px-6 py-3 text-sm font-semibold text-primary transition hover:bg-primary/90">
+              {content.buttonText}
+            </Link>
+          ) : null}
+        </div>
+      )
+
+    default:
+      return null
+  }
+}
 
 async function getProduct(id: string) {
   try {
@@ -33,7 +201,6 @@ async function getProduct(id: string) {
         reviews: {
           include: { user: { select: { name: true, email: true } } },
           orderBy: { created_at: 'desc' },
-          take: 5,
         },
       },
     })
@@ -55,9 +222,24 @@ export default async function ProductDetailPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const metadata = (product.metadata ?? {}) as ProductMetadata
+  const showStockField = metadata.visibility?.showStock ?? true
+  const galleryImages = Array.isArray(metadata.gallery)
+    ? metadata.gallery.filter((item): item is string => typeof item === 'string')
+    : []
+  const salesPageHero = metadata.salesPage?.hero
+  const salesPageBody = typeof metadata.salesPage?.body === 'string' ? metadata.salesPage.body : ''
+  const salesPageSections = Array.isArray(metadata.salesPage?.sections)
+    ? metadata.salesPage.sections.filter((section) => section.isVisible !== false)
+    : []
+  const availabilityNote = metadata.availability?.note ?? ''
+
   const avgRating = product.reviews.length > 0
     ? product.reviews.reduce((acc, r) => acc + r.rating, 0) / product.reviews.length
     : 0
+
+  // null = non connecté ; sinon true seulement si l'utilisateur n'a pas déjà noté ce produit
+  const canReview = user ? !product.reviews.some((review) => review.user_id === user.id) : null
 
   const otherProducts = product.shop?.products.filter(p => p.id !== product.id) ?? []
 
@@ -143,21 +325,25 @@ export default async function ProductDetailPage({
         <AnimatedSection delay={0.15} direction="right">
           <div className="flex flex-col h-full">
 
-            {product.category && (
-              <Link
-                href={`/products?category=${product.category.id}`}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold mb-3
-                  w-fit px-3 py-1 rounded-full transition-all hover:opacity-80"
-                style={{
-                  background: 'var(--primary-dim)',
-                  border: '1px solid var(--primary-border)',
-                  color: 'var(--primary)',
-                }}
-              >
-                <Package size={11} />
-                {product.category.name}
-              </Link>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {product.category && (
+                <Link
+                  href={`/products?category=${product.category.id}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold w-fit px-3 py-1 rounded-full transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--primary-dim)',
+                    border: '1px solid var(--primary-border)',
+                    color: 'var(--primary)',
+                  }}
+                >
+                  <Package size={11} />
+                  {product.category.name}
+                </Link>
+              )}
+              <span className="inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border" style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}>
+                {product.type === 'DIGITAL' ? 'Produit numérique' : 'Produit physique'}
+              </span>
+            </div>
 
             <h1
               className="text-2xl md:text-3xl font-extrabold mb-3"
@@ -184,41 +370,103 @@ export default async function ProductDetailPage({
               </div>
             )}
 
-            <div className="mb-6">
-              <p
-                className="text-4xl font-extrabold"
-                style={{ color: 'var(--primary)', letterSpacing: '-0.03em' }}
-              >
-                {new Intl.NumberFormat('fr-FR').format(Number(product.price))}
-                <span className="text-lg font-normal ml-2"
-                  style={{ color: 'var(--muted-foreground)' }}>
-                  FCFA
-                </span>
-              </p>
-            </div>
+            <ProductPromoCard
+              price={Number(product.price)}
+              originalPrice={product.original_price ? Number(product.original_price) : null}
+              promoLabel={product.promo_label ?? undefined}
+              promoEndAt={product.promo_end_at ? product.promo_end_at.toISOString() : undefined}
+              ctaText={product.cta_text ?? undefined}
+              ctaUrl={product.cta_url ?? undefined}
+              ctaStyle={product.cta_style ?? 'PRIMARY'}
+            />
 
             {product.description && (
-              <div className="mb-6">
-                <p className="text-sm leading-relaxed"
-                  style={{ color: 'var(--muted-foreground)' }}>
+              <div className="mb-6 prose max-w-full prose-sm prose-headings:text-base prose-p:text-sm prose-a:text-primary prose-img:rounded-3xl prose-img:max-w-full"
+                style={{ color: 'var(--muted-foreground)' }}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, [rehypeSanitize, {
+                    ...defaultSchema,
+                    tagNames: [...(defaultSchema.tagNames ?? []), 'video', 'source'],
+                    attributes: {
+                      ...defaultSchema.attributes,
+                      video: [...((defaultSchema.attributes?.video as string[]) ?? []), 'src', 'class', 'controls', 'width', 'height', 'poster', 'preload'],
+                      source: [...((defaultSchema.attributes?.source as string[]) ?? []), 'src', 'type'],
+                    },
+                  }]]}
+                >
                   {product.description}
-                </p>
+                </ReactMarkdown>
               </div>
             )}
 
-            <div className="flex items-center gap-2 mb-6">
-              <CheckCircle size={14} style={{
-                color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
-              }} />
-              <span className="text-xs font-medium" style={{
-                color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
-              }}>
-                {product.stock > 0
-                  ? `${product.stock} disponible${product.stock > 1 ? 's' : ''}`
-                  : 'Rupture de stock'
-                }
-              </span>
-            </div>
+            {availabilityNote ? (
+              <div className="mb-6 rounded-3xl border border-border bg-[var(--surface)] p-5 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">Disponibilité</p>
+                <p>{availabilityNote}</p>
+              </div>
+            ) : null}
+
+            {galleryImages.length > 0 ? (
+              <ProductGalleryCarousel images={galleryImages} productName={product.name} />
+            ) : null}
+
+            {(salesPageHero || salesPageBody) ? (
+              <div className="mb-6 space-y-6">
+                {salesPageHero ? (
+                  <div className="rounded-3xl overflow-hidden border border-border bg-[var(--surface)]">
+                    {salesPageHero.imageUrl ? (
+                      <div className="relative h-72 sm:h-96">
+                        <Image src={salesPageHero.imageUrl} alt={salesPageHero.headline ?? 'Hero'} fill className="object-cover" />
+                      </div>
+                    ) : null}
+                    <div className="p-8">
+                      <h2 className="text-3xl font-extrabold mb-3" style={{ color: 'var(--foreground)' }}>
+                        {salesPageHero.headline ?? 'Titre de la page de vente'}
+                      </h2>
+                      <p className="text-sm leading-7 text-muted-foreground mb-5">
+                        {salesPageHero.subheadline ?? 'Sous-titre de présentation.'}
+                      </p>
+                      {salesPageHero.ctaUrl && salesPageHero.ctaText ? (
+                        <Link href={salesPageHero.ctaUrl} className="inline-flex items-center justify-center rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
+                          {salesPageHero.ctaText}
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+                {salesPageBody ? (
+                  <div className="rounded-3xl border border-border bg-[var(--surface)] p-8 prose max-w-full prose-sm prose-headings:text-base prose-a:text-primary prose-img:rounded-3xl prose-img:max-w-full">
+                    <RichTextRenderer value={salesPageBody} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {salesPageSections.length > 0 ? (
+              <div className="mb-6 space-y-6">
+                {salesPageSections.map((section, index) => (
+                  <div key={`${section.id ?? index}-${section.type}`}>
+                    {renderSalesPageSection(section)}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {showStockField && (
+              <div className="flex items-center gap-2 mb-6">
+                <CheckCircle size={14} style={{
+                  color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
+                }} />
+                <span className="text-xs font-medium" style={{
+                  color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
+                }}>
+                  {product.stock > 0
+                    ? `${product.stock} disponible${product.stock > 1 ? 's' : ''}`
+                    : 'Rupture de stock'
+                  }
+                </span>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 mb-8">
@@ -230,8 +478,10 @@ export default async function ProductDetailPage({
                     price: Number(product.price),
                     image_url: product.image_url,
                     stock: product.stock,
+                    shop_id: product.shop?.id ?? '',
                     shop_name: product.shop?.name ?? '',
                     shop_slug: product.shop?.slug ?? '',
+                    type: product.type,
                   }}
                 />
               ) : (
@@ -254,22 +504,8 @@ export default async function ProductDetailPage({
                 className="w-12 h-12 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
               />
 
-              <button
-                className="w-12 h-12 flex items-center justify-center rounded-xl transition-all
-                  hover:scale-105 active:scale-95"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--muted-foreground)',
-                }}
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    navigator.clipboard.writeText(window.location.href)
-                  }
-                }}
-              >
-                <Share2 size={18} />
-              </button>
+              {/* Share button is a client component to avoid passing handlers from server */}
+              <ShareButton productId={product.id} />
             </div>
 
             {/* Vendeur */}
@@ -306,57 +542,21 @@ export default async function ProductDetailPage({
       </div>
 
       {/* Avis */}
-      {product.reviews.length > 0 && (
-        <AnimatedSection delay={0.2}>
-          <div className="mb-16">
-            <h2 className="text-xl font-bold mb-6"
-              style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
-              Avis clients ({product.reviews.length})
-            </h2>
-            <div className="space-y-4">
-              {product.reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="rounded-2xl p-5"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}
-                    >
-                      {(review.user.name ?? review.user.email).slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
-                        {review.user.name ?? review.user.email.split('@')[0]}
-                      </p>
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            size={10}
-                            fill={i < review.rating ? '#F59E0B' : 'none'}
-                            style={{ color: '#F59E0B' }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="ml-auto text-xs" style={{ color: 'var(--subtle)' }}>
-                      {new Date(review.created_at).toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
-                  {review.comment && (
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-                      {review.comment}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </AnimatedSection>
-      )}
+      <ProductReviews
+        productId={product.id}
+        initialReviews={product.reviews.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment,
+          is_verified_purchase: review.is_verified_purchase,
+          seller_reply: review.seller_reply,
+          seller_reply_at: review.seller_reply_at ? review.seller_reply_at.toISOString() : null,
+          created_at: review.created_at.toISOString(),
+          user: review.user,
+        }))}
+        canReview={canReview}
+      />
+
 
       {/* Autres produits de la boutique */}
       {otherProducts.length > 0 && (

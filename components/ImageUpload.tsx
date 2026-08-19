@@ -3,19 +3,25 @@
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Upload, X, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface ImageUploadProps {
   value: string | null
   onChange: (url: string | null) => void
+  // optional callback providing Cloudinary metadata after upload or null on remove
+  onMeta?: ((meta: { url: string; public_id?: string; resource_type?: string; format?: string; width?: number; height?: number; bytes?: number; mediaId?: string | null } | null) => void) | undefined
   bucket?: string
+  shopId?: string | null
+  uploaderId?: string | null
 }
 
 export function ImageUpload({
   value,
   onChange,
+  onMeta,
   bucket = 'products',
+  shopId = null,
+  uploaderId = null,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -36,23 +42,44 @@ export function ImageUpload({
 
     setUploading(true)
     try {
-      const supabase = createClient()
-      const ext = file.name.split('.').pop()
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', bucket)
+      if (shopId) formData.append('shopId', shopId)
+      if (uploaderId) formData.append('uploaderId', uploaderId)
 
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(path, file, { upsert: true })
+      const response = await fetch('/api/cloudinary/upload', {
+        method: 'POST',
+        body: formData,
+      })
 
-      if (error) throw error
+      const result = await response.json()
+      if (!response.ok || !result.url) {
+        console.error('Cloudinary upload error', result)
+        const msg = result?.error?.message || result?.error || result?.message || 'Upload Cloudinary échoué'
+        toast.error(String(msg))
+        return
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(path)
-
-      onChange(publicUrl)
-      toast.success('Image uploadée ✅')
-    } catch {
+      console.log('✅ Image uploaded successfully:', result.url)
+      onChange(result.url)
+      
+      if (typeof onMeta === 'function') {
+        onMeta({
+          url: result.url,
+          public_id: result.public_id,
+          resource_type: result.resource_type,
+          format: result.format,
+          width: result.width,
+          height: result.height,
+          bytes: result.bytes,
+          mediaId: result.mediaId ?? null,
+        })
+      }
+      
+      toast.success('Image enregistrée avec succès ✅')
+    } catch (err) {
+      console.error(err)
       toast.error('Erreur lors de l\'upload')
     } finally {
       setUploading(false)
@@ -61,6 +88,7 @@ export function ImageUpload({
 
   const handleRemove = () => {
     onChange(null)
+    if (typeof onMeta === 'function') onMeta(null)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -78,8 +106,7 @@ export function ImageUpload({
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center
-              justify-center transition-all hover:scale-110"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 hover:bg-red-600/95"
             style={{ background: 'rgba(10,10,10,0.8)', color: '#F87171' }}
           >
             <X size={14} />
@@ -90,9 +117,7 @@ export function ImageUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="w-full flex flex-col items-center justify-center gap-3 py-10
-            rounded-2xl border-2 border-dashed transition-all hover:scale-[1.01]
-            disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex flex-col items-center justify-center gap-3 py-10 rounded-2xl border-2 border-dashed transition-all hover:scale-[1.01] hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             borderColor: 'var(--border)',
             background: 'var(--surface-2)',

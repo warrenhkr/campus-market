@@ -3,6 +3,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 
+function formatAuthError(message: string, userName?: string) {
+  const trimmedName = (userName || '').trim()
+  const namePart = trimmedName.split(/\s+/).filter(Boolean)[0] || 'Bonjour'
+  const prefix = trimmedName ? `Bonjour ${namePart}` : 'Bonjour'
+  const lower = message.toLowerCase()
+
+  if (lower.includes('already') && (lower.includes('registered') || lower.includes('exists') || lower.includes('email'))) {
+    return `${prefix}, cette adresse e-mail est déjà utilisée. Connecte-toi à ton compte ou réinitialise ton mot de passe.`
+  }
+
+  if (lower.includes('password') && (lower.includes('at least') || lower.includes('minimum'))) {
+    return `${prefix}, ton mot de passe doit contenir au moins 6 caractères.`
+  }
+
+  if (lower.includes('invalid') && lower.includes('email')) {
+    return `${prefix}, l’adresse e-mail n’est pas valide. Vérifie le format puis réessaie.`
+  }
+
+  return `${prefix}, une erreur est survenue lors de la création de ton compte. Vérifie tes informations et réessaie.`
+}
+
 export async function login(formData: FormData) {
   const supabase = await createClient()
   const email    = formData.get('email') as string
@@ -30,7 +51,7 @@ export async function register(formData: FormData) {
     options: { data: { name, onboarding_complete: true } },
   })
 
-  if (error) return { success: false, error: error.message }
+  if (error) return { success: false, error: formatAuthError(error.message, name) }
 
   if (data.user) {
     await prisma.user.upsert({
@@ -99,8 +120,10 @@ export async function saveOnboarding(formData: FormData) {
     })
 
     return { success: true }
-  } catch (err: any) {
-    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+  } catch (err: unknown) {
+    const digest = err && typeof err === 'object' && 'digest' in err ? String((err as { digest?: unknown }).digest) : undefined
+    const message = err instanceof Error ? err.message : undefined
+    if (digest?.startsWith('NEXT_REDIRECT') || message === 'NEXT_REDIRECT') {
       throw err
     }
     // Logs détaillés pour Vercel/console

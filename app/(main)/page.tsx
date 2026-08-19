@@ -1,10 +1,54 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Zap, Shield, Users, ChevronRight } from 'lucide-react'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
 import { AnimatedCounter } from '@/components/AnimatedCounter'
 import { prisma } from '@/lib/prisma'
+
+function SparkIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M12 2.5 14.8 9l6.7 2.8-6.7 2.8L12 21.5l-2.8-6.9-6.7-2.8L9.2 9l2.8-6.5Z" />
+    </svg>
+  )
+}
+
+function ShieldIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 3 5 6v6c0 4.5 3 8.7 7 10 4-1.3 7-5.5 7-10V6l-7-3Z" />
+      <path d="m9.5 12 1.5 1.5 3.5-4" />
+    </svg>
+  )
+}
+
+function UsersIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M16 19v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1" />
+      <circle cx="10" cy="7" r="3" />
+      <path d="M20 19v-1a4 4 0 0 0-3-3.87" />
+      <path d="M16 4.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+
+function ArrowRightIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M5 12h14" />
+      <path d="m13 5 7 7-7 7" />
+    </svg>
+  )
+}
+
+function ChevronRightIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  )
+}
 
 interface Category {
   id: string
@@ -88,7 +132,7 @@ export default async function HomePage() {
                 color: 'var(--primary)',
               }}
             >
-              <Zap size={11} fill="currentColor" />
+              <SparkIcon style={{ width: 11, height: 11 }} />
               La marketplace des étudiants du Bénin
             </div>
           </AnimatedSection>
@@ -129,7 +173,7 @@ export default async function HomePage() {
                 }}
               >
                 Explorer les produits
-                <ArrowRight size={16} />
+                <ArrowRightIcon style={{ width: 16, height: 16 }} />
               </Link>
               <Link
                 href="/become-seller"
@@ -236,7 +280,7 @@ export default async function HomePage() {
                   transition-colors hover:opacity-70"
                 style={{ color: 'var(--muted-foreground)' }}
               >
-                Voir tout <ChevronRight size={16} />
+                Voir tout <ChevronRightIcon style={{ width: 16, height: 16 }} />
               </Link>
             </div>
           </AnimatedSection>
@@ -316,7 +360,7 @@ export default async function HomePage() {
                   className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl text-sm font-semibold"
                   style={{ background: 'var(--primary-dim)', color: 'var(--primary)' }}
                 >
-                  Devenir vendeur <ArrowRight size={14} />
+                  Devenir vendeur <ArrowRightIcon style={{ width: 14, height: 14 }} />
                 </Link>
               </div>
             </AnimatedSection>
@@ -340,9 +384,9 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { icon: Shield, title: 'Sécurisé',       desc: 'Comptes étudiants vérifiés. Échangez en toute confiance.' },
-              { icon: Zap,    title: 'Rapide & Simple', desc: 'Mettez en vente en quelques minutes. Zéro friction.' },
-              { icon: Users,  title: 'Communauté',      desc: "Achetez et vendez avec vos camarades de campus." },
+              { icon: ShieldIcon, title: 'Sécurisé', desc: 'Comptes étudiants vérifiés. Échangez en toute confiance.' },
+              { icon: SparkIcon, title: 'Rapide & Simple', desc: 'Mettez en vente en quelques minutes. Zéro friction.' },
+              { icon: UsersIcon, title: 'Communauté', desc: "Achetez et vendez avec vos camarades de campus." },
             ].map(({ icon: Icon, title, desc }, i) => (
               <AnimatedCard key={title} index={i}>
                 <div
@@ -359,7 +403,7 @@ export default async function HomePage() {
                       border: '1px solid var(--primary-border)',
                     }}
                   >
-                    <Icon size={22} style={{ color: 'var(--primary)' }} />
+                    <Icon style={{ width: 22, height: 22, color: 'var(--primary)' }} />
                   </div>
                   <h3 className="text-lg font-bold mb-2"
                     style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
@@ -414,7 +458,7 @@ export default async function HomePage() {
                       boxShadow: '0 0 30px rgba(163,230,53,0.2)',
                     }}
                   >
-                    Devenir vendeur <ArrowRight size={16} />
+                    Devenir vendeur <ArrowRightIcon style={{ width: 16, height: 16 }} />
                   </Link>
                   <Link
                     href="/register"

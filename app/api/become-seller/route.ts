@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
 
-  // Crée le seller + shop
+  // Crée le seller + shop, puis met à jour le rôle utilisateur
   await prisma.seller.create({
     data: {
       user_id: user.id,
@@ -48,6 +48,11 @@ export async function POST(req: NextRequest) {
         },
       },
     },
+  })
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { role: 'SELLER' },
   })
 
   return NextResponse.json({ success: true })

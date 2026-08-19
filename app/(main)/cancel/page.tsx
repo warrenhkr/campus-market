@@ -34,7 +34,7 @@ export default function CancelPage() {
           Paiement annulé
         </h1>
         <p className="text-sm mb-8" style={{ color: 'var(--muted-foreground)' }}>
-          Ton paiement n'a pas abouti. Ton panier est toujours disponible, tu peux réessayer.
+          Ton paiement n&apos;a pas abouti. Ton panier est toujours disponible, tu peux réessayer.
         </p>
 
         <div className="flex flex-col gap-3">

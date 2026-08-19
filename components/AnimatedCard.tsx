@@ -1,6 +1,3 @@
-'use client'
-
-import { motion } from 'framer-motion'
 import { ReactNode } from 'react'
 
 interface AnimatedCardProps {
@@ -11,22 +8,14 @@ interface AnimatedCardProps {
 
 export function AnimatedCard({ children, className, index = 0 }: AnimatedCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.08,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      whileHover={{
-        y: -4,
-        transition: { duration: 0.2 },
-      }}
-      className={className}
+    <div
+      className={[
+        'transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1',
+        className,
+      ].join(' ')}
+      style={{ transitionDelay: `${index * 0.08}s` }}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }

@@ -6,9 +6,11 @@ import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
 import { TypewriterText } from '@/components/TypewriterText'
 import {
-  ShoppingCart, Heart, Package, ArrowRight,
-  Star, Clock, CheckCircle,
-} from 'lucide-react'
+  ShoppingCartIcon, HeartIcon, PackageIcon, ArrowRightIcon,
+  StarIcon, ClockIcon, CheckCircleIcon,
+} from '@/components/ServerIcons'
+
+const ArrowRight = ArrowRightIcon
 
 async function getUserData(userId: string) {
   try {
@@ -39,11 +41,11 @@ async function getUserData(userId: string) {
 }
 
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  PENDING:   { label: 'En attente',  color: '#F59E0B', icon: Clock },
-  SHIPPED:   { label: 'Expédié',     color: '#3B82F6', icon: Package },
-  DELIVERED: { label: 'Livré',       color: '#10B981', icon: CheckCircle },
-  CANCELLED: { label: 'Annulé',      color: '#F87171', icon: Clock },
-  COMPLETED: { label: 'Complété',    color: '#10B981', icon: CheckCircle },
+  PENDING:   { label: 'En attente',  color: '#F59E0B', icon: ClockIcon },
+  SHIPPED:   { label: 'Expédié',     color: '#3B82F6', icon: PackageIcon },
+  DELIVERED: { label: 'Livré',       color: '#10B981', icon: CheckCircleIcon },
+  CANCELLED: { label: 'Annulé',      color: '#F87171', icon: ClockIcon },
+  COMPLETED: { label: 'Complété',    color: '#10B981', icon: CheckCircleIcon },
 }
 
 export default async function AccountPage() {
@@ -59,28 +61,28 @@ export default async function AccountPage() {
   const QUICK_LINKS = [
     {
       href: '/account/orders',
-      icon: ShoppingCart,
+      icon: ShoppingCartIcon,
       label: 'Mes commandes',
       desc: `${orders.length} commande${orders.length > 1 ? 's' : ''}`,
       color: '#3B82F6',
     },
     {
       href: '/account/cart',
-      icon: Heart,
+      icon: HeartIcon,
       label: 'Mon panier',
       desc: 'Articles sauvegardés',
       color: '#F87171',
     },
     {
       href: '/products',
-      icon: Package,
+      icon: PackageIcon,
       label: 'Explorer',
       desc: `${productCount}+ produits`,
       color: '#A3E635',
     },
     {
       href: '/account/profile',
-      icon: Star,
+      icon: StarIcon,
       label: 'Mon profil',
       desc: 'Gérer mes infos',
       color: '#F59E0B',

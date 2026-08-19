@@ -20,7 +20,9 @@ export async function GET(request: Request) {
       result = await login(formData)
     }
     return NextResponse.json({ result })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur inconnue'
+    const stack = error instanceof Error ? error.stack : undefined
+    return NextResponse.json({ error: message, stack }, { status: 500 })
   }
 }

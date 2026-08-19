@@ -7,7 +7,7 @@ import { AnimatedSection } from '@/components/AnimatedSection'
 import {
   ArrowLeft, Clock, CheckCircle, Package,
   Truck, XCircle, CreditCard, Store,
-} from 'lucide-react'
+} from '@/components/ServerIcons'
 
 async function getOrder(orderId: string, userId: string) {
   try {

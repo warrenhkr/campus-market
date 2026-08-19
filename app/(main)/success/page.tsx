@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircleIcon } from '@/components/ServerIcons'
 import { AnimatedSection } from '@/components/AnimatedSection'
 
 export default function SuccessPage() {
@@ -18,7 +18,7 @@ export default function SuccessPage() {
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
             style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-border)' }}
           >
-            <CheckCircle size={32} style={{ color: 'var(--primary)' }} />
+            <CheckCircleIcon size={32} style={{ color: 'var(--primary)' }} />
           </div>
           <h1 className="text-2xl font-extrabold mb-2"
             style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>

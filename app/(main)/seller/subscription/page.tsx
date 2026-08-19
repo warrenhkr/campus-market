@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { AnimatedSection } from '@/components/AnimatedSection'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SubscriptionPlansClient } from '@/components/seller/SubscriptionPlansClient'
 
 export const metadata = {
@@ -26,19 +28,28 @@ export default async function SellerSubscriptionPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-          Abonnement Vendeur
-        </h1>
-        <p style={{ color: 'var(--muted-foreground)' }}>
-          Gérez votre plan et débloquez plus de fonctionnalités pour votre boutique.
-        </p>
-      </div>
-      
-      <SubscriptionPlansClient 
-        currentPlan={seller.subscription_plan} 
-        expiresAt={seller.subscription_expires_at ? seller.subscription_expires_at.toISOString() : null} 
-      />
+      <AnimatedSection delay={0}>
+        <Card className="rounded-3xl border border-border">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
+              Abonnement Vendeur
+            </CardTitle>
+            <p style={{ color: 'var(--muted-foreground)' }}>
+              Gérez votre plan et débloquez plus de fonctionnalités pour votre boutique.
+            </p>
+          </CardHeader>
+        </Card>
+      </AnimatedSection>
+      <AnimatedSection delay={0.1}>
+        <Card className="rounded-3xl border border-border">
+          <CardContent>
+            <SubscriptionPlansClient 
+              currentPlan={seller.subscription_plan} 
+              expiresAt={seller.subscription_expires_at ? seller.subscription_expires_at.toISOString() : null} 
+            />
+          </CardContent>
+        </Card>
+      </AnimatedSection>
     </div>
   )
 }

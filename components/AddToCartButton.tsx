@@ -11,8 +11,10 @@ interface AddToCartButtonProps {
     price: number
     image_url: string | null
     stock: number
+    shop_id: string
     shop_name: string
     shop_slug: string
+    type: 'PHYSICAL' | 'DIGITAL'
   }
 }
 

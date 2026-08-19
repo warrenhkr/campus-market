@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { Star } from 'lucide-react'
+import { AnimatedSection } from '@/components/AnimatedSection'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { SellerReviewCard } from '@/components/seller/SellerReviewCard'
+import { Star } from '@/components/ServerIcons'
 
 async function getReviewsData(userId: string) {
   const seller = await prisma.seller.findUnique({
@@ -64,15 +67,18 @@ export default async function SellerReviewsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>
-          Avis reçus ⭐
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          Les avis de vos acheteurs sur tous vos produits.
-        </p>
-      </div>
+      <AnimatedSection delay={0}>
+        <Card className="rounded-3xl border border-border">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
+              Avis reçus ⭐
+            </CardTitle>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              Les avis de vos acheteurs sur tous vos produits.
+            </p>
+          </CardHeader>
+        </Card>
+      </AnimatedSection>
 
       {reviews.length === 0 ? (
         <div className="rounded-2xl px-6 py-16 text-center"
@@ -148,33 +154,19 @@ export default async function SellerReviewsPage() {
           {/* Liste des avis */}
           <div className="space-y-4">
             {reviews.map(review => (
-              <div key={review.id} className="rounded-2xl p-5"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                        {review.user.name ?? review.user.email}
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ background: 'var(--border)', color: 'var(--muted-foreground)' }}>
-                        {review.product.name}
-                      </span>
-                    </div>
-                    <StarRow rating={review.rating} />
-                    {review.comment && (
-                      <p className="text-sm mt-2 leading-relaxed" style={{ color: 'var(--foreground)' }}>
-                        &ldquo;{review.comment}&rdquo;
-                      </p>
-                    )}
-                  </div>
-                  <time className="text-xs shrink-0" style={{ color: 'var(--muted-foreground)' }}>
-                    {new Date(review.created_at).toLocaleDateString('fr-FR', {
-                      day: 'numeric', month: 'short', year: 'numeric'
-                    })}
-                  </time>
-                </div>
-              </div>
+              <SellerReviewCard
+                key={review.id}
+                review={{
+                  id: review.id,
+                  rating: review.rating,
+                  comment: review.comment,
+                  is_verified_purchase: review.is_verified_purchase,
+                  seller_reply: review.seller_reply,
+                  created_at: review.created_at.toISOString(),
+                  product: review.product,
+                  user: review.user,
+                }}
+              />
             ))}
           </div>
         </>

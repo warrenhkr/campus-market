@@ -1,25 +1,52 @@
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
 import { prisma } from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search } from 'lucide-react'
+import { SearchIcon, GraduationCapIcon, UsersIcon } from '@/components/ServerIcons'
+
+const GraduationCap = GraduationCapIcon
+const Users = UsersIcon
 
 interface SearchParams {
   search?: string
   category?: string
+  university?: string
+  filiere?: string
+  scope?: 'my-university' | 'my-filiere'
 }
 
-async function getProducts(search?: string, category?: string) {
+async function getCurrentUserAcademics(userId: string | undefined) {
+  if (!userId) return null
   try {
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: { university: true, filiere: true },
+    })
+  } catch {
+    return null
+  }
+}
+
+async function getProducts(filters: SearchParams, academics: { university: string | null; filiere: string | null } | null) {
+  try {
+    const { search, category, university, filiere, scope } = filters
+
+    // "scope" applique un raccourci basé sur le profil de l'utilisateur connecté
+    // (repris du cahier des charges : "produits populaires dans ton campus" /
+    // "produits vendus dans ta filière"), sans écraser un filtre explicite.
+    const effectiveUniversity = scope === 'my-university' ? academics?.university ?? undefined : university
+    const effectiveFiliere = scope === 'my-filiere' ? academics?.filiere ?? undefined : filiere
+
     return await prisma.product.findMany({
       where: {
         status: 'APPROVED',
         is_available: true,
-        ...(search ? {
-          name: { contains: search, mode: 'insensitive' }
-        } : {}),
+        ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
         ...(category ? { category_id: category } : {}),
+        ...(effectiveUniversity ? { shop: { seller: { user: { university: effectiveUniversity } } } } : {}),
+        ...(effectiveFiliere ? { shop: { seller: { user: { filiere: effectiveFiliere } } } } : {}),
       },
       include: { category: true, shop: true },
       orderBy: { created_at: 'desc' },
@@ -37,16 +64,52 @@ async function getCategories() {
   }
 }
 
+// Listes dérivées du référentiel de l'onboarding pour peupler les filtres
+// avec des valeurs cohérentes avec celles réellement choisies par les vendeurs.
+async function getFilterOptions() {
+  try {
+    const [universities, filieres] = await Promise.all([
+      prisma.user.findMany({
+        where: { university: { not: null } },
+        select: { university: true },
+        distinct: ['university'],
+        orderBy: { university: 'asc' },
+      }),
+      prisma.user.findMany({
+        where: { filiere: { not: null } },
+        select: { filiere: true },
+        distinct: ['filiere'],
+        orderBy: { filiere: 'asc' },
+      }),
+    ])
+    return {
+      universities: universities.map((u) => u.university).filter((u): u is string => !!u),
+      filieres: filieres.map((f) => f.filiere).filter((f): f is string => !!f),
+    }
+  } catch {
+    return { universities: [], filieres: [] }
+  }
+}
+
 export default async function ProductsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>
 }) {
-  const { search, category } = await searchParams
-  const [products, categories] = await Promise.all([
-    getProducts(search, category),
+  const filters = await searchParams
+  const { search, category, university, filiere, scope } = filters
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const academics = await getCurrentUserAcademics(user?.id)
+
+  const [products, categories, filterOptions] = await Promise.all([
+    getProducts(filters, academics),
     getCategories(),
+    getFilterOptions(),
   ])
+
+  const hasActiveFilters = !!(search || category || university || filiere || scope)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -67,9 +130,9 @@ export default async function ProductsPage({
 
       {/* Filtres */}
       <AnimatedSection delay={0.1}>
-        <form method="GET" className="flex flex-wrap gap-3 mb-8">
+        <form method="GET" className="flex flex-wrap gap-3 mb-4">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2"
+            <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2"
               style={{ color: 'var(--subtle)' }} />
             <input
               name="search"
@@ -100,6 +163,38 @@ export default async function ProductsPage({
             ))}
           </select>
 
+          <select
+            name="university"
+            defaultValue={university}
+            className="text-sm px-3 py-2 rounded-xl outline-none max-w-[220px]"
+            style={{
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              color: 'var(--foreground)',
+            }}
+          >
+            <option value="">Toutes les universités</option>
+            {filterOptions.universities.map((uni) => (
+              <option key={uni} value={uni}>{uni}</option>
+            ))}
+          </select>
+
+          <select
+            name="filiere"
+            defaultValue={filiere}
+            className="text-sm px-3 py-2 rounded-xl outline-none max-w-[220px]"
+            style={{
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              color: 'var(--foreground)',
+            }}
+          >
+            <option value="">Toutes les filières</option>
+            {filterOptions.filieres.map((fil) => (
+              <option key={fil} value={fil}>{fil}</option>
+            ))}
+          </select>
+
           <button
             type="submit"
             className="px-4 py-2 text-sm font-semibold rounded-xl transition-all hover:scale-105"
@@ -108,7 +203,7 @@ export default async function ProductsPage({
             Filtrer
           </button>
 
-          {(search ?? category) && (
+          {hasActiveFilters && (
             <Link
               href="/products"
               className="px-4 py-2 text-sm rounded-xl transition-all"
@@ -122,6 +217,41 @@ export default async function ProductsPage({
             </Link>
           )}
         </form>
+
+        {/* Raccourcis "campus" — repris du positionnement Campus Market : mettre
+            en avant les produits de son propre entourage académique. */}
+        {(academics?.university || academics?.filiere) && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            {academics.university && (
+              <Link
+                href={`/products?scope=my-university`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                style={{
+                  background: scope === 'my-university' ? 'var(--primary)' : 'var(--primary-dim)',
+                  color: scope === 'my-university' ? 'var(--primary-foreground)' : 'var(--primary)',
+                  border: '1px solid var(--primary-border)',
+                }}
+              >
+                <GraduationCap size={12} />
+                Produits populaires dans mon campus
+              </Link>
+            )}
+            {academics.filiere && (
+              <Link
+                href={`/products?scope=my-filiere`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                style={{
+                  background: scope === 'my-filiere' ? 'var(--primary)' : 'var(--primary-dim)',
+                  color: scope === 'my-filiere' ? 'var(--primary-foreground)' : 'var(--primary)',
+                  border: '1px solid var(--primary-border)',
+                }}
+              >
+                <Users size={12} />
+                Produits vendus dans ma filière
+              </Link>
+            )}
+          </div>
+        )}
       </AnimatedSection>
 
       {/* Résultats */}
@@ -155,19 +285,32 @@ export default async function ProductsPage({
                       ) : (
                         <span className="text-4xl">📦</span>
                       )}
-                      {product.category && (
+                      <div className="absolute top-3 left-3 flex flex-wrap gap-2 z-10">
+                        {product.category && (
+                          <div
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: 'rgba(10,10,10,0.7)',
+                              backdropFilter: 'blur(8px)',
+                              color: 'var(--muted-foreground)',
+                              border: '1px solid var(--border)',
+                            }}
+                          >
+                            {product.category.name}
+                          </div>
+                        )}
                         <div
-                          className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-xs font-medium z-10"
+                          className="px-2 py-0.5 rounded-full text-xs font-medium"
                           style={{
                             background: 'rgba(10,10,10,0.7)',
                             backdropFilter: 'blur(8px)',
-                            color: 'var(--muted-foreground)',
+                            color: 'var(--primary)',
                             border: '1px solid var(--border)',
                           }}
                         >
-                          {product.category.name}
+                          {product.type === 'DIGITAL' ? 'Numérique' : 'Physique'}
                         </div>
-                      )}
+                      </div>
                     </div>
                     <div className="p-4">
                       <p

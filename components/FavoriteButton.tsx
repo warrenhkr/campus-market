@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 
 interface FavoriteButtonProps {
   productId: string
@@ -17,21 +16,14 @@ export function FavoriteButton({ productId, className }: FavoriteButtonProps) {
 
   useEffect(() => {
     const check = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const res = await fetch(`/api/favorites?product_id=${encodeURIComponent(productId)}`)
+      if (!res.ok) {
         setChecking(false)
         return
       }
 
-      const { data } = await supabase
-        .from('favorites')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-        .maybeSingle()
-
-      setIsFavorite(!!data)
+      const json = await res.json()
+      setIsFavorite(Boolean(json.favorite))
       setChecking(false)
     }
     check()
@@ -41,37 +33,27 @@ export function FavoriteButton({ productId, className }: FavoriteButtonProps) {
     e.preventDefault()
     e.stopPropagation()
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      toast.error('Connecte-toi pour ajouter aux favoris')
-      return
-    }
-
     setLoading(true)
     try {
-      if (isFavorite) {
-        const res = await fetch('/api/favorites', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: productId }),
-        })
-        if (res.ok) {
-          setIsFavorite(false)
-          toast.success('Retiré des favoris')
-        }
-      } else {
-        const res = await fetch('/api/favorites', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: productId }),
-        })
-        if (res.ok) {
-          setIsFavorite(true)
-          toast.success('Ajouté aux favoris ❤️')
-        }
+      const url = '/api/favorites'
+      const res = await fetch(url, {
+        method: isFavorite ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId }),
+      })
+
+      if (res.status === 401) {
+        toast.error('Connecte-toi pour ajouter aux favoris')
+        return
       }
+
+      if (!res.ok) {
+        toast.error('Une erreur est survenue')
+        return
+      }
+
+      setIsFavorite(!isFavorite)
+      toast.success(isFavorite ? 'Retiré des favoris' : 'Ajouté aux favoris ❤️')
     } catch {
       toast.error('Une erreur est survenue')
     } finally {

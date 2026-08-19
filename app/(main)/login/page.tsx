@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Eye, EyeOff } from 'lucide-react'
@@ -12,7 +11,6 @@ import { toast } from 'sonner'
 import { GoogleLoginButton } from '@/components/GoogleLoginButton'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showPassword, setShowPassword] = useState(false)
 

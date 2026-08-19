@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { PackageIcon, ClockIcon, CheckCircleIcon, TruckIcon, XCircleIcon } from '@/components/ServerIcons'
 
 async function getSellerOrders(userId: string) {
   try {
@@ -46,11 +47,11 @@ const STATUS_MAP: Record<string, {
   color: string
   icon: React.ElementType
 }> = {
-  PENDING:   { label: 'En attente', color: '#F59E0B', icon: Clock },
-  SHIPPED:   { label: 'Expédié',    color: '#3B82F6', icon: Truck },
-  DELIVERED: { label: 'Livré',      color: '#10B981', icon: CheckCircle },
-  COMPLETED: { label: 'Complété',   color: '#10B981', icon: CheckCircle },
-  CANCELLED: { label: 'Annulé',     color: '#F87171', icon: XCircle },
+  PENDING:   { label: 'En attente', color: '#F59E0B', icon: ClockIcon },
+  SHIPPED:   { label: 'Expédié',    color: '#3B82F6', icon: TruckIcon },
+  DELIVERED: { label: 'Livré',      color: '#10B981', icon: CheckCircleIcon },
+  COMPLETED: { label: 'Complété',   color: '#10B981', icon: CheckCircleIcon },
+  CANCELLED: { label: 'Annulé',     color: '#F87171', icon: XCircleIcon },
 }
 
 export default async function SellerOrdersPage() {
@@ -67,15 +68,17 @@ export default async function SellerOrdersPage() {
     <div>
       {/* Header */}
       <AnimatedSection delay={0}>
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-1"
-            style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
-            Commandes reçues
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-            {orders.length} commande{orders.length > 1 ? 's' : ''} au total
-          </p>
-        </div>
+        <Card className="rounded-3xl border border-border mb-8">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-2xl font-bold"
+              style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
+              Commandes reçues
+            </CardTitle>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              {orders.length} commande{orders.length > 1 ? 's' : ''} au total
+            </p>
+          </CardHeader>
+        </Card>
       </AnimatedSection>
 
       {orders.length > 0 ? (
@@ -120,7 +123,7 @@ export default async function SellerOrdersPage() {
                     {order.order_items.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 px-5 py-4">
                         <div
-                          className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0
+                          className="w-12 h-12 rounded-xl overflow-hidden shrink-0
                             flex items-center justify-center"
                           style={{ background: 'var(--surface-2)' }}
                         >
@@ -133,7 +136,7 @@ export default async function SellerOrdersPage() {
                               className="object-cover w-full h-full"
                             />
                           ) : (
-                            <Package size={18} style={{ color: 'var(--subtle)' }} />
+                            <PackageIcon size={18} style={{ color: 'var(--subtle)' }} />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -145,7 +148,7 @@ export default async function SellerOrdersPage() {
                             Quantité : {item.quantity}
                           </p>
                         </div>
-                        <p className="text-sm font-bold flex-shrink-0"
+                        <p className="text-sm font-bold shrink-0"
                           style={{ color: 'var(--primary)' }}>
                           {new Intl.NumberFormat('fr-FR').format(
                             Number(item.price) * item.quantity

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { ArrowLeft, Clock, CheckCircle, Package, Truck, XCircle } from 'lucide-react'
+import { ArrowLeft, Clock, CheckCircle, Package, Truck, XCircle } from '@/components/ServerIcons'
 
 async function getUserOrders(userId: string) {
   try {

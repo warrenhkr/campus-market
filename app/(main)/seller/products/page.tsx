@@ -2,13 +2,45 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import Image from 'next/image'
 import { AnimatedSection } from '@/components/AnimatedSection'
-import { AnimatedCard } from '@/components/AnimatedCard'
-import {
-  Plus, Package, Eye, EyeOff,
-  Edit, CheckCircle, Clock, XCircle,
-} from 'lucide-react'
+import { PlusIcon } from '@/components/ServerIcons'
+
+const Plus = PlusIcon
+import ProductCard from '@/components/seller/ProductCard'
+
+function serializeProduct(product: {
+  id: string
+  name: string
+  price: unknown
+  stock: number
+  status: string
+  is_available: boolean
+  image_url: string | null
+  type: 'PHYSICAL' | 'DIGITAL'
+  category: { id: string; name: string } | null
+  created_at: Date | string
+  updated_at: Date | string
+  [key: string]: unknown
+}) {
+  // Convertir tous les Decimal en nombre
+  const convertDecimal = (value: unknown): unknown => {
+    if (value && typeof value === 'object' && 'd' in value) {
+      // Decimal object de Prisma
+      return Number(value)
+    }
+    return value
+  }
+
+  return {
+    ...product,
+    price: Number(product.price),
+    original_price: convertDecimal(product.original_price),
+    delivery_fee: convertDecimal(product.delivery_fee),
+    free_delivery_threshold: convertDecimal(product.free_delivery_threshold),
+    created_at: product.created_at instanceof Date ? product.created_at.toISOString() : product.created_at,
+    updated_at: product.updated_at instanceof Date ? product.updated_at.toISOString() : product.updated_at,
+  }
+}
 
 async function getSellerProducts(userId: string) {
   try {
@@ -25,17 +57,19 @@ async function getSellerProducts(userId: string) {
         },
       },
     })
-    return seller
+
+    if (!seller) return null
+
+    return {
+      ...seller,
+      shops: seller.shops.map((shop) => ({
+        ...shop,
+        products: shop.products.map(serializeProduct),
+      })),
+    }
   } catch {
     return null
   }
-}
-
-const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  APPROVED:       { label: 'Approuvé',    color: '#10B981', icon: CheckCircle },
-  PENDING_REVIEW: { label: 'En attente', color: '#F59E0B', icon: Clock },
-  REJECTED:       { label: 'Rejeté',     color: '#F87171', icon: XCircle },
-  HIDDEN:         { label: 'Masqué',     color: '#888888', icon: EyeOff },
 }
 
 export default async function SellerProductsPage() {
@@ -76,113 +110,9 @@ export default async function SellerProductsPage() {
 
       {allProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {allProducts.map((product, i) => {
-            const status = STATUS_MAP[product.status] ?? STATUS_MAP.PENDING_REVIEW
-            const StatusIcon = status.icon
-
-            return (
-              <AnimatedCard key={product.id} index={i}>
-                <div
-                  className="rounded-2xl overflow-hidden"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-                >
-                  {/* Image */}
-                  <div
-                    className="relative flex items-center justify-center"
-                    style={{ aspectRatio: '16/9', background: 'var(--surface-2)' }}
-                  >
-                    {product.image_url ? (
-                      <Image
-                        src={product.image_url}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <Package size={32} style={{ color: 'var(--subtle)' }} />
-                    )}
-
-                    {/* Status badge */}
-                    <div
-                      className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1
-                        rounded-full text-xs font-semibold"
-                      style={{ background: `${status.color}22`, color: status.color }}
-                    >
-                      <StatusIcon size={10} />
-                      {status.label}
-                    </div>
-
-                    {/* Available toggle */}
-                    <div
-                      className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1
-                        rounded-full text-xs font-semibold"
-                      style={{
-                        background: product.is_available ? '#10B98122' : '#88888822',
-                        color: product.is_available ? '#10B981' : '#888888',
-                      }}
-                    >
-                      {product.is_available
-                        ? <><Eye size={10} /> Visible</>
-                        : <><EyeOff size={10} /> Masqué</>
-                      }
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <p className="text-sm font-semibold mb-1 line-clamp-1"
-                      style={{ color: 'var(--foreground)' }}>
-                      {product.name}
-                    </p>
-
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-base font-bold" style={{ color: 'var(--primary)' }}>
-                        {new Intl.NumberFormat('fr-FR').format(Number(product.price))} FCFA
-                      </p>
-                      <span className="text-xs" style={{ color: 'var(--subtle)' }}>
-                        Stock: {product.stock}
-                      </span>
-                    </div>
-
-                    {product.category && (
-                      <p className="text-xs mb-3" style={{ color: 'var(--subtle)' }}>
-                        {product.category.name}
-                      </p>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/seller/products/${product.id}/edit`}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl
-                          text-xs font-semibold transition-all hover:scale-105"
-                        style={{
-                          background: 'var(--surface-2)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--foreground)',
-                        }}
-                      >
-                        <Edit size={12} />
-                        Modifier
-                      </Link>
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="flex items-center justify-center px-3 py-2 rounded-xl
-                          text-xs transition-all hover:scale-105"
-                        style={{
-                          background: 'var(--surface-2)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--muted-foreground)',
-                        }}
-                      >
-                        <Eye size={12} />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </AnimatedCard>
-            )
-          })}
+          {allProducts.map((product, i) => (
+            <ProductCard key={product.id} product={product} index={i} />
+          ))}
         </div>
       ) : (
         <AnimatedSection>
@@ -203,7 +133,7 @@ export default async function SellerProductsPage() {
                 text-sm font-bold transition-all hover:scale-105"
               style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
             >
-              <Plus size={16} />
+              <PlusIcon size={16} />
               Ajouter un produit
             </Link>
           </div>

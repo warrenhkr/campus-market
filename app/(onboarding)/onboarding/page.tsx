@@ -43,8 +43,10 @@ export default async function OnboardingPage() {
       })
       redirect('/')
     }
-  } catch (err: any) {
-    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+  } catch (err: unknown) {
+    const digest = err && typeof err === 'object' && 'digest' in err ? String((err as { digest?: unknown }).digest) : undefined
+    const message = err instanceof Error ? err.message : undefined
+    if (digest?.startsWith('NEXT_REDIRECT') || message === 'NEXT_REDIRECT') {
       throw err
     }
     console.error('[onboarding] Prisma query failed, showing form as fallback:', err)
