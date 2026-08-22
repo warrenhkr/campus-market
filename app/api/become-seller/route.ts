@@ -33,13 +33,14 @@ export async function POST(req: NextRequest) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
 
-  // Crée le seller + shop, puis met à jour le rôle utilisateur
+  // L'ouverture de boutique est immédiate. Les règles publiques et la modération
+  // après publication restent applicables aux contenus et aux comportements.
   await prisma.seller.create({
     data: {
       user_id: user.id,
       shop_name: shopName,
       description,
-      verification_status: 'PENDING',
+      verification_status: 'APPROVED',
       shops: {
         create: {
           name: shopName,

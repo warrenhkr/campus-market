@@ -40,7 +40,7 @@ const menuByRole: Record<string, { href: string; label: string; icon: React.Elem
   SELLER: [
     { href: '/products',        label: 'Produits',     icon: Package },
     { href: '/account',         label: 'Mon compte',   icon: LayoutDashboard },
-    { href: '/seller',          label: 'Dashboard',    icon: LayoutDashboard },
+    { href: '/seller',          label: 'Espace vendeur', icon: LayoutDashboard },
     { href: '/seller/products', label: 'Mes produits', icon: Package },
   ],
   ADMIN: [
@@ -244,7 +244,7 @@ export function Navbar() {
                             style={{ color: 'var(--foreground)' }}
                           >
                             <LayoutDashboard size={14} className="mr-2" />
-                            Dashboard vendeur
+                            Espace vendeur
                           </Link>
                         </DropdownMenuItem>
                       )}

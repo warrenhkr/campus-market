@@ -95,14 +95,20 @@ export async function POST(req: NextRequest) {
     const validDocuments = persisted.filter(Boolean)
     await prisma.seller.update({
       where: { id: seller.id },
-      data: { verification_status: 'PENDING' },
+      data: {
+        verification_status: seller.verification_status === 'APPROVED'
+          ? 'APPROVED'
+          : 'PENDING',
+      },
     })
 
     return NextResponse.json({
       success: true,
-      verificationStatus: 'PENDING',
+      verificationStatus: seller.verification_status === 'APPROVED' ? 'APPROVED' : 'PENDING',
       documents: validDocuments,
-      message: 'Documents de vérification enregistrés. Une revue est en cours avant le premier retrait.',
+      message: seller.verification_status === 'APPROVED'
+        ? 'Documents enregistrés.'
+        : 'Documents enregistrés. Votre dossier est en attente de validation par un administrateur.',
     })
   } catch (error) {
     console.error('KYC POST error:', error)

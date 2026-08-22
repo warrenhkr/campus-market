@@ -14,14 +14,15 @@
 - [x] Les pièces d'identité peuvent être enregistrées en utilisant les uploads Cloudinary existants.
 - [x] Les documents sont stockés dans storeMedia avec uploader_id = utilisateur connecté.
 - [x] Le statut seller.verification_status est remis en PENDING quand des documents sont soumis.
-- [ ] Ajouter le workflow complet d'approbation / rejet par l'admin.
+- [x] Le flux est désormais facultatif et ne bloque plus l’accès à la vente ni les retraits.
+- [ ] Ajouter le workflow complet d'approbation / rejet par l'admin si un jour une validation renforcée est nécessaire.
 - [x] Ajouter l'UI vendeur pour uploader les documents et consulter l'état KYC. (components/seller/SellerKycForm & app/(main)/seller/settings/verification.tsx)
 
 ## 3) Retraits vendeur
 
 - [x] Modèle Withdrawal ajouté à prisma/schema.prisma.
 - [x] Endpoint ajouté : /api/seller/withdrawals (GET/POST).
-- [x] Vérification KYC imposée avant le premier retrait.
+- [x] Vérification KYC facultative, sans blocage du retrait.
 - [x] Le retrait est enregistré en statut PENDING.
 - [ ] Ajouter l'endpoint d'admin pour valider ou refuser les retraits.
 - [x] Ajouter l'UI vendeur pour demander un retrait et consulter l'historique. (components/seller/SellerWithdrawals & app/(main)/seller/withdrawals.tsx)
@@ -32,7 +33,7 @@
 - [x] Le signalement est lié au vendeur concerné via le shop.seller_id.
 - [x] Le moti/description du signalement est stocké en base.
 - [x] Endpoint admin ajouté : /api/admin/reports (GET / PATCH).
-- [ ] Ajouter l'UI de modération admin pour traiter les signalements.
+- [x] Ajouter l'UI de modération admin pour traiter les signalements.
 - [ ] Ajouter les notifications d'alerte et le workflow de suspension/validation.
 
 ## 5) Politiques / règlements / conformité
@@ -40,8 +41,8 @@
 - [x] Documentation ajoutée dans SELLER_PAYMENT_AND_PREVIEW_PLAN.md.
 - [x] Points couverts : règles vendeur, retrait, remboursement, modération, conformité locale.
 - [x] Documentation de base ajoutée dans docs/politique-confidentialite-et-regles-vendeur.md.
-- [ ] Finaliser et afficher les politiques dans l'interface publique/admin avant lancement.
-- [ ] Ajouter les pages d'affichage public des conditions générales, confidentialité et règles vendeur.
+- [x] Les politiques sont rendues visibles dans le front office via /legal, /legal/confidentialite, /legal/conditions et /legal/vendeur.
+- [x] Ajouter les pages d'affichage public des conditions générales, confidentialité et règles vendeur.
 
 ## 5b) Finalisation de la phase paiement vendeur / mode live
 

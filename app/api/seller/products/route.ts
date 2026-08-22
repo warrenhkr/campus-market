@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
         seo_thumbnail_url: seo_thumbnail_url ?? null,
         seo_keywords: seo_keywords ?? null,
         metadata: (metadata ?? {}) as Prisma.InputJsonValue,
-        status: 'PENDING_REVIEW',
+        status: 'APPROVED',
         is_available: is_available ?? true,
         variants: variants && variants.length > 0
           ? {

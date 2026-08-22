@@ -96,10 +96,10 @@ export default function SellerKycForm() {
     <div className="w-full px-4 pb-8 sm:px-6 lg:px-8">
       <div className="mb-6">
         <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-sm text-muted-foreground">
-          Vérification KYC
+          Vérification facultative
         </p>
-        <h2 className="text-2xl font-bold text-foreground">Vérifier votre identité</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Avant le premier retrait, merci de soumettre une pièce d'identité et une photo si demandée.</p>
+        <h2 className="text-2xl font-bold text-foreground">Vérifier votre identité (optionnel)</h2>
+        <p className="mt-1 text-sm text-muted-foreground">La vérification n’est plus obligatoire pour activer le compte ou demander un retrait. Cela reste facultatif pour renforcer la confiance, sans bloquer l’accès.</p>
       </div>
 
       <Card className="rounded-3xl border border-border">
@@ -126,7 +126,7 @@ export default function SellerKycForm() {
               <div className="col-span-full">
                 <div className="mt-2 flex gap-2">
                   <Button variant="outline" onClick={handleAddEmpty}>Ajouter un document</Button>
-                  <Button onClick={handleSubmit} disabled={submitting}>{submitting ? 'Envoi...' : 'Soumettre pour vérification'}</Button>
+                  <Button onClick={handleSubmit} disabled={submitting}>{submitting ? 'Envoi...' : 'Soumettre la vérification'}</Button>
                 </div>
               </div>
             </div>

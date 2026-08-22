@@ -282,7 +282,7 @@ model Product {
   stock_mode     StockMode       @default(TRACKED)
   low_stock_threshold Int?
   allow_backorder Boolean        @default(false)
-  is_available   Boolean         @default(true)
+  is_available   Boolean         @default(false)
   // Visibilité et exclusivité (inspiré des options "création de produit" de référence)
   is_hidden_from_shop  Boolean   @default(false)
   hide_sales_count     Boolean   @default(false)
@@ -302,7 +302,7 @@ model Product {
   seo_thumbnail_url String?
   seo_keywords    String?
   metadata       Json            @default("{}")
-  status         ProductStatus   @default(APPROVED)
+  status         ProductStatus   @default(PENDING_REVIEW)
   type           ProductType     @default(PHYSICAL)
   created_at     DateTime        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime        @default(now()) @db.Timestamptz(6)

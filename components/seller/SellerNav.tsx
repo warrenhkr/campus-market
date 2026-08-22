@@ -21,11 +21,9 @@ const NAV = [
   { href: '/seller/help', label: 'Centre d’aide', icon: Headphones },
 ]
 
-// Sur mobile, on garde les sections les plus utiles directement visibles et on
-// met le reste dans le panneau "Plus". 5 liens visibles + 1 bouton d'overflow
-// évite d'avoir un menu totalement caché tandis que les 10 sections restent
-// toujours accessibles.
-const MOBILE_PRIMARY = ['/seller', '/seller/products', '/seller/orders', '/seller/earnings', '/seller/shop']
+// Sur mobile, quatre accès fréquents restent visibles; le reste est disponible
+// dans le panneau "Plus".
+const MOBILE_PRIMARY = ['/seller', '/seller/products', '/seller/orders', '/seller/shop']
 
 function isActiveHref(pathname: string, href: string) {
   return href === '/seller' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)

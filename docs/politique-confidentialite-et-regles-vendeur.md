@@ -122,17 +122,30 @@ Le vendeur doit :
 - afficher les conditions générales d’utilisation et la politique de confidentialité dans le front office
 - mettre à disposition une page d’aide / FAQ vendeur
 - ajouter un règlement de service client et de médiation des litiges
-- finaliser la procédure de validation KYC et de paiement vers les vendeurs
+- finaliser la procédure de paiement vers les vendeurs et le mode live admin
 - préparer le switch de paiement FedaPay live via un panneau admin de configuration sécurisée
+- activer la modération et les signalements pour les contenus interdits (sexualité explicite, arnaque, contenus dangereux, contrefaçons, etc.)
+
+### 8.1 Vérification vendeur / produit : mode désactivé
+
+La plateforme ne bloque plus l’accès aux vendeurs ou la publication des produits à cause d’une vérification manuelle obligatoire. Cette vérification reste facultative et peut être utilisée comme signal de confiance, mais elle n’est pas un prérequis pour démarrer.
+
+La protection contre les contenus interdits repose plutôt sur :
+
+- la politique de contenu publique
+- les signalements utilisateurs
+- l’outil de modération admin
+- les règles de bannissement des produits interdits
+- les restrictions de paiement et de comptabilité
 
 ## 9. Position actuelle du projet
 
 La plateforme a déjà les éléments de base pour :
 
-- stocker les vérifications vendeur
+- activer la vente avec un accès sans vérification obligatoire
 - mettre en place les demandes de retrait
 - gérer les signalements
 - enregistrer les paiements et les ordres
-- préparer la mise en production FedaPay
+- préparer la mise en production FedaPay avec un contrôle admin explicite
 
-Il reste à finaliser la mise en place d’un mode de paiement configurable depuis l’admin, la documentation publique et la validation QA finale avant le lancement.
+Il reste à finaliser la mise en place d’un mode de paiement configurable depuis l’admin, la documentation publique, la modération active et la validation QA finale avant le lancement.

@@ -51,10 +51,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Vendeur introuvable.' }, { status: 403 })
     }
 
-    if (seller.verification_status !== 'APPROVED') {
-      return NextResponse.json({ error: 'La vérification KYC est requise avant le premier retrait.' }, { status: 403 })
-    }
-
+    // La vérification KYC n'est plus bloquante pour les retraits. La police de
+    // contenu et la modération restent la vraie protection contre les usages
+    // abusifs ou interdits.
     const withdrawal = await prisma.withdrawal.create({
       data: {
         seller_id: seller.id,

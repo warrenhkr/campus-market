@@ -3,6 +3,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Store, CheckCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -82,11 +83,11 @@ export default function BecomeSellerPage() {
             </motion.div>
 
             <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-              Demande envoyée ! 🎉
+              Boutique créée ! 🎉
             </h2>
             <p className="text-sm mb-8" style={{ color: 'var(--muted-foreground)' }}>
-              Ton dossier est en cours d&apos;examen par notre équipe.
-              Tu recevras une notification dès que ta boutique sera approuvée.
+              Ta boutique est ouverte immédiatement. Tu peux maintenant ajouter tes produits
+              et commencer à vendre, dans le respect des règles de la plateforme.
             </p>
 
             <Button
@@ -177,7 +178,7 @@ export default function BecomeSellerPage() {
                   Créer ma boutique
                 </h2>
                 <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
-                  Ta demande sera examinée par notre équipe sous 24h.
+                  Ta boutique sera créée immédiatement. Consulte les <Link href="/legal/vendeur" className="font-semibold text-primary hover:underline">règles vendeur</Link> avant de publier.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -236,7 +237,7 @@ export default function BecomeSellerPage() {
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Soumettre ma demande
+                          Créer ma boutique
                           <ArrowRight size={16} />
                         </span>
                       )}

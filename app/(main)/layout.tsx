@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/Navbar'
 import { PageTransition } from '@/components/PageTransition'
 import { BottomNav } from '@/components/BottomNav'
+import { FooterLegal } from '@/components/FooterLegal'
 
 export default function MainLayout({
   children,
@@ -16,6 +17,7 @@ export default function MainLayout({
           {children}
         </main>
       </PageTransition>
+      <FooterLegal />
       <BottomNav />
     </div>
   )
