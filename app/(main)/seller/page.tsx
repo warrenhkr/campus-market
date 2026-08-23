@@ -88,9 +88,6 @@ export default async function SellerDashboardPage() {
   const data = await getSellerData(user.id)
   if (!data) redirect('/become-seller')
 
-  // Spacer for mobile bottom nav
-  const MobileSpacer = () => <div className="h-24 md:hidden" />
-
   const { seller, totalProducts, totalOrders, totalEarnings, recentOrders, lowStockProducts } = data
 
   const STATS = [
@@ -101,7 +98,7 @@ export default async function SellerDashboardPage() {
   ]
 
   return (
-    <div className="w-full px-4 pb-12 pt-4 sm:px-6 lg:px-8 md:pt-5">
+    <div className="w-full pb-12 pt-4 md:pt-5">
 
       <AnimatedSection delay={0}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-10 gap-4">

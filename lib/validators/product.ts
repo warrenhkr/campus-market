@@ -60,15 +60,12 @@ export const productPricingTierSchema = z.object({
 const slugSchema = z.preprocess((value) => {
   if (value === '' || value === null || value === undefined) return null
   if (typeof value !== 'string') return undefined
-  // slug propre : minuscules, chiffres, tirets uniquement
   return value
-    .trim()
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire les accents
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80)
-}, z.string().min(1).nullable())
+}, z.string()
+  .min(1, 'Identifiant URL requis')
+  .max(80, 'Identifiant URL trop long')
+  .regex(/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/, 'L’URL doit utiliser des minuscules, chiffres et tirets, sans tiret au début ou à la fin')
+  .nullable())
 
 const heroSectionSchema = z.object({
   type: z.literal('hero'),

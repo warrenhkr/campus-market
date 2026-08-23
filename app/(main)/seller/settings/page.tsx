@@ -17,7 +17,7 @@ export default async function SellerSettingsPage() {
   if (!shop) redirect('/become-seller')
 
   return (
-    <div className="w-full px-4 pb-8 sm:px-6 lg:px-8">
+    <div className="w-full pb-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-sm text-muted-foreground">

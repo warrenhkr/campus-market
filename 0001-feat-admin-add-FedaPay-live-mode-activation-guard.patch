@@ -1,0 +1,468 @@
+From 0b1af9a7a0de8782fae588eebf6ea63173f42b87 Mon Sep 17 00:00:00 2001
+From: Jehudiel270 <jehudieldossou@gmail.com>
+Date: Wed, 19 Aug 2026 02:00:47 +0100
+Subject: [PATCH] feat(admin): add FedaPay live-mode activation guard
+
+---
+ IMPLEMENTATION_PROGRESS.md                    |  11 ++
+ app/(main)/admin/payments/page.tsx            |  36 +++++
+ app/api/admin/payment-config/route.ts         | 110 ++++++++++++++
+ components/admin/PaymentModeManager.tsx       | 117 +++++++++++++++
+ ...tique-confidentialite-et-regles-vendeur.md | 138 ++++++++++++++++++
+ 5 files changed, 412 insertions(+)
+ create mode 100644 app/(main)/admin/payments/page.tsx
+ create mode 100644 app/api/admin/payment-config/route.ts
+ create mode 100644 components/admin/PaymentModeManager.tsx
+ create mode 100644 docs/politique-confidentialite-et-regles-vendeur.md
+
+diff --git a/IMPLEMENTATION_PROGRESS.md b/IMPLEMENTATION_PROGRESS.md
+index 854f726..2c310b3 100644
+--- a/IMPLEMENTATION_PROGRESS.md
++++ b/IMPLEMENTATION_PROGRESS.md
+@@ -39,7 +39,18 @@
+ 
+ - [x] Documentation ajoutée dans SELLER_PAYMENT_AND_PREVIEW_PLAN.md.
+ - [x] Points couverts : règles vendeur, retrait, remboursement, modération, conformité locale.
++- [x] Documentation de base ajoutée dans docs/politique-confidentialite-et-regles-vendeur.md.
+ - [ ] Finaliser et afficher les politiques dans l'interface publique/admin avant lancement.
++- [ ] Ajouter les pages d'affichage public des conditions générales, confidentialité et règles vendeur.
++
++## 5b) Finalisation de la phase paiement vendeur / mode live
++
++- [x] Le plan de finalisation est documenté dans SELLER_PAYMENT_AND_PREVIEW_PLAN.md.
++- [x] Les demandes de retrait vendeur, KYC et signalements sont déjà en place au niveau de base.
++- [x] Préparer le switch de paiement FedaPay live via un panneau admin sécurisé.
++- [x] Enregistrer le mode sandbox/live dans un config serveur ou en variables d'environnement et verrouiller le mode live derrière validation admin.
++- [x] Définir l’UX admin pour activer le live, stocker les clés et tester la configuration sans activer la production tant que la validation n’est pas faite.
++- [ ] Connecter le panneau live au stockage réel des clés si le projet passe en environnement multi-tenant / production.
+ 
+ ## 6) Affichage produit / preview vendeur
+ 
+diff --git a/app/(main)/admin/payments/page.tsx b/app/(main)/admin/payments/page.tsx
+new file mode 100644
+index 0000000..9771344
+--- /dev/null
++++ b/app/(main)/admin/payments/page.tsx
+@@ -0,0 +1,36 @@
++import { redirect } from 'next/navigation'
++import { createClient } from '@/lib/supabase/server'
++import { prisma } from '@/lib/prisma'
++import { PaymentModeManager } from '@/components/admin/PaymentModeManager'
++
++async function requireAdminUser() {
++  const supabase = await createClient()
++  const { data: { user } } = await supabase.auth.getUser()
++
++  if (!user) redirect('/login')
++
++  const profile = await prisma.user.findUnique({
++    where: { id: user.id },
++    select: { role: true },
++  })
++
++  if (profile?.role !== 'ADMIN') redirect('/seller')
++}
++
++export default async function AdminPaymentsPage() {
++  await requireAdminUser()
++
++  return (
++    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
++      <div className="space-y-2">
++        <p className="text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">Administration</p>
++        <h1 className="text-3xl font-bold">Paiements & FedaPay</h1>
++        <p className="text-sm text-muted-foreground">
++          Contrôle du mode sandbox / live, préparation de la mise en production et validation des clés de paiement.
++        </p>
++      </div>
++
++      <PaymentModeManager />
++    </div>
++  )
++}
+diff --git a/app/api/admin/payment-config/route.ts b/app/api/admin/payment-config/route.ts
+new file mode 100644
+index 0000000..1ffdaa2
+--- /dev/null
++++ b/app/api/admin/payment-config/route.ts
+@@ -0,0 +1,110 @@
++import { NextRequest, NextResponse } from 'next/server'
++import { createClient } from '@/lib/supabase/server'
++import { prisma } from '@/lib/prisma'
++
++function getCurrentPaymentMode() {
++  const envMode = (process.env.FEDAPAY_ENV || 'sandbox').toLowerCase()
++  if (envMode === 'production' || envMode === 'live') return 'live'
++  return 'sandbox'
++}
++
++function getLiveKeyStatus() {
++  const requiredKeys = [
++    'FEDAPAY_LIVE_PUBLIC_KEY',
++    'FEDAPAY_LIVE_SECRET_KEY',
++    'FEDAPAY_LIVE_WEBHOOK_SECRET',
++  ] as const
++
++  const missing = requiredKeys.filter((key) => !process.env[key])
++
++  return {
++    configured: missing.length === 0,
++    missing,
++  }
++}
++
++async function requireAdminSession() {
++  const supabase = await createClient()
++  const { data: { user } } = await supabase.auth.getUser()
++
++  if (!user) {
++    throw new Error('UNAUTHENTICATED')
++  }
++
++  const profile = await prisma.user.findUnique({
++    where: { id: user.id },
++    select: { role: true },
++  })
++
++  if (profile?.role !== 'ADMIN') {
++    throw new Error('FORBIDDEN')
++  }
++
++  return user
++}
++
++export async function GET() {
++  try {
++    await requireAdminSession()
++
++    const mode = getCurrentPaymentMode()
++    const liveKeys = getLiveKeyStatus()
++
++    return NextResponse.json({
++      success: true,
++      provider: 'FedaPay',
++      mode,
++      liveEnabled: mode === 'live' || process.env.FEDAPAY_LIVE_ENABLED === 'true',
++      liveKeysConfigured: liveKeys.configured,
++      missingKeys: liveKeys.missing,
++      note: 'Le mode live reste désactivé tant que la validation admin de production n’a pas été faite.',
++    })
++  } catch (error) {
++    if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
++      return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 })
++    }
++
++    if (error instanceof Error && error.message === 'FORBIDDEN') {
++      return NextResponse.json({ error: 'Accès refusé.' }, { status: 403 })
++    }
++
++    console.error('admin/payment-config GET error:', error)
++    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
++  }
++}
++
++export async function PATCH(req: NextRequest) {
++  try {
++    await requireAdminSession()
++
++    const body = await req.json()
++    const rawMode = typeof body?.mode === 'string' ? body.mode.toLowerCase() : 'sandbox'
++    const requestedMode = rawMode === 'live' ? 'live' : 'sandbox'
++
++    const liveKeys = getLiveKeyStatus()
++    const canEnableLive = requestedMode === 'sandbox' || liveKeys.configured
++
++    return NextResponse.json({
++      success: true,
++      dryRun: true,
++      requestedMode,
++      liveEnabled: canEnableLive && requestedMode === 'live',
++      liveKeysConfigured: liveKeys.configured,
++      missingKeys: liveKeys.missing,
++      message: canEnableLive
++        ? 'Configuration validée pour la bascule live. La mise en production doit toujours être vérifiée avant activation complète.'
++        : 'Les clés live sont manquantes. Le paiement reste en mode sandbox pour sécuriser la plateforme.',
++    })
++  } catch (error) {
++    if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
++      return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 })
++    }
++
++    if (error instanceof Error && error.message === 'FORBIDDEN') {
++      return NextResponse.json({ error: 'Accès refusé.' }, { status: 403 })
++    }
++
++    console.error('admin/payment-config PATCH error:', error)
++    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
++  }
++}
+diff --git a/components/admin/PaymentModeManager.tsx b/components/admin/PaymentModeManager.tsx
+new file mode 100644
+index 0000000..4da6547
+--- /dev/null
++++ b/components/admin/PaymentModeManager.tsx
+@@ -0,0 +1,117 @@
++'use client'
++
++import { useEffect, useState } from 'react'
++import { Button } from '@/components/ui/button'
++import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
++
++export function PaymentModeManager() {
++  const [mode, setMode] = useState<'sandbox' | 'live'>('sandbox')
++  const [liveKeysConfigured, setLiveKeysConfigured] = useState(false)
++  const [missingKeys, setMissingKeys] = useState<string[]>([])
++  const [loading, setLoading] = useState(true)
++  const [note, setNote] = useState('Chargement de la configuration…')
++  const [busy, setBusy] = useState(false)
++
++  useEffect(() => {
++    const load = async () => {
++      try {
++        const res = await fetch('/api/admin/payment-config', { cache: 'no-store' })
++        const json = await res.json()
++        if (!res.ok) {
++          setNote(json?.error ?? 'Impossible de charger la configuration.')
++          setLoading(false)
++          return
++        }
++
++        setMode(json.mode === 'live' ? 'live' : 'sandbox')
++        setLiveKeysConfigured(Boolean(json.liveKeysConfigured))
++        setMissingKeys(Array.isArray(json.missingKeys) ? json.missingKeys : [])
++        setNote(json.note ?? 'Configuration chargée.')
++      } catch (error) {
++        console.error('Failed to load payment config', error)
++        setNote('Impossible de contacter l’API de configuration.')
++      } finally {
++        setLoading(false)
++      }
++    }
++
++    void load()
++  }, [])
++
++  const handleToggleLive = async () => {
++    setBusy(true)
++    try {
++      const res = await fetch('/api/admin/payment-config', {
++        method: 'PATCH',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ mode: 'live' }),
++      })
++
++      const json = await res.json()
++      if (!res.ok) {
++        setNote(json?.error ?? 'Activation du mode live impossible.')
++        return
++      }
++
++      const isLive = json.requestedMode === 'live' && Boolean(json.liveEnabled)
++      setMode(isLive ? 'live' : 'sandbox')
++      setLiveKeysConfigured(Boolean(json.liveKeysConfigured))
++      setMissingKeys(Array.isArray(json.missingKeys) ? json.missingKeys : [])
++      setNote(json.message ?? 'Configuration enregistrée.')
++    } catch (error) {
++      console.error('Failed to switch payment mode', error)
++      setNote('Erreur lors de la bascule en mode live.')
++    } finally {
++      setBusy(false)
++    }
++  }
++
++  return (
++    <Card className="rounded-3xl border border-border">
++      <CardHeader>
++        <CardTitle className="text-2xl font-bold">Configuration FedaPay</CardTitle>
++      </CardHeader>
++      <CardContent className="space-y-5">
++        <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-4">
++          <div>
++            <p className="text-sm text-muted-foreground">Mode actuel</p>
++            <p className="text-xl font-semibold capitalize">{mode}</p>
++          </div>
++          <span className={`rounded-full px-3 py-1 text-xs font-medium ${mode === 'live' ? 'bg-green-500/15 text-green-600' : 'bg-amber-500/15 text-amber-600'}`}>
++            {mode === 'live' ? 'Live' : 'Sandbox'}
++          </span>
++        </div>
++
++        <div className="rounded-2xl border border-dashed border-border bg-background/50 p-4 text-sm text-muted-foreground">
++          {note}
++        </div>
++
++        {!liveKeysConfigured && missingKeys.length > 0 && (
++          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
++            <p className="font-medium">Clés live manquantes :</p>
++            <ul className="mt-2 list-disc pl-5">
++              {missingKeys.map((key) => <li key={key}>{key}</li>)}
++            </ul>
++          </div>
++        )}
++
++        <div className="flex flex-wrap gap-3">
++          <Button
++            type="button"
++            onClick={handleToggleLive}
++            disabled={busy || loading || mode === 'live' || !liveKeysConfigured}
++          >
++            {busy ? 'Activation…' : mode === 'live' ? 'Mode live actif' : 'Activer le mode live'}
++          </Button>
++          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
++            Rafraîchir
++          </Button>
++        </div>
++
++        <p className="text-xs text-muted-foreground">
++          Le mode live reste désactivé tant que la validation admin de production n’a pas été faite. La plateforme reste sécurisée en sandbox tant que la configuration n’est pas validée.
++        </p>
++      </CardContent>
++    </Card>
++  )
++}
+diff --git a/docs/politique-confidentialite-et-regles-vendeur.md b/docs/politique-confidentialite-et-regles-vendeur.md
+new file mode 100644
+index 0000000..687a0af
+--- /dev/null
++++ b/docs/politique-confidentialite-et-regles-vendeur.md
+@@ -0,0 +1,138 @@
++# Politique de confidentialité et règles vendeur
++
++## 1. Objet
++
++Cette documentation fixe les règles de base applicables à la plateforme Campus Market avant le lancement public. Elle sert de base de discussion avec les équipes produit, juridique, sécurité et support pour finaliser la version de production.
++
++## 2. Politique de confidentialité
++
++### 2.1 Données collectées
++
++La plateforme collecte et traite les données suivantes, selon le contexte d’usage :
++
++- identifiants de compte (nom, prénom, email, mot de passe hashé ou authentification fournisseur)
++- données de profil étudiant ou vendeur (université, filière, établissement, contact)
++- données de boutique (nom, description, contacts, réseaux sociaux, logo, bannière, images)
++- contenu commercial (produits, prix, descriptions, variantes, FAQ, médias)
++- données de commande (articles, montant, adresse de livraison, téléphone, statut de commande)
++- données de paiement (identifiant provider, montant, devise, statut, référence transaction)
++- données de vérification (KYC) lorsque le vendeur demande un retrait ou valide sa boutique
++- données techniques (logs, erreurs, cookies techniques nécessaires au fonctionnement de l’application)
++
++### 2.2 Finalités
++
++Les données sont utilisées pour :
++
++- créer et sécuriser un compte utilisateur
++- gérer la boutique, les produits et les commandes
++- lancer et suivre les paiements
++- traiter les retraits et les remboursements
++- assurer la modération et la conformité du marketplace
++- améliorer la qualité du service, les statistiques et la sécurité
++
++### 2.3 Protection des données
++
++- Les informations sensibles comme les clés de paiement ne doivent jamais être exposées côté client.
++- Les données de paiement doivent passer par le provider dédié (Fedapay) et les webhooks sécurisés.
++- Les fichiers KYC doivent être stockés dans un système de médias sécurisés avec accès limité.
++- Les accès administrateurs doivent être restreints et journalisés.
++
++### 2.4 Durée de conservation
++
++- les comptes et profils sont conservés tant que l’utilisateur active son compte ou tant que la plateforme est légalement tenue de conserver les données
++- les commandes et paiements sont conservés pour les besoins comptables, de litige et de conformité
++- les éléments de modération et les signalements sont conservés pendant la période juridique requise
++
++### 2.5 Droits des utilisateurs
++
++Les utilisateurs doivent pouvoir :
++
++- consulter leurs données
++- les corriger
++- demander leur suppression, dans le cadre de la législation locale
++- contester un traitement
++- demander des informations sur l’usage des données
++
++## 3. Règles vendeur
++
++### 3.1 Conditions d’inscription
++
++Pour ouvrir une boutique, le vendeur doit :
++
++- fournir des informations identitaires et de contact valides
++- accepter les conditions générales d’utilisation
++- confirmer qu’il est autorisé à vendre les produits proposés
++- respecter les conditions du marché cible et de la plateforme
++
++### 3.2 Produits autorisés / interdits
++
++Les produits interdits comprennent, sans exhaustivité :
++
++- contrefaçons, produits illégaux ou non conformes
++- fraude, arnaque, contenus trompeurs
++- objets interdits par la législation locale
++- contenus sexuels, violents, ou illégaux
++- produits susceptibles de porter atteinte à la sécurité ou à la santé publique
++
++### 3.3 Responsabilités vendeur
++
++Le vendeur doit :
++
++- fournir des descriptions honnêtes, des prix exacts et des images conformes
++- accepter les commandes dans les délais annoncés
++- assurer le suivi de livraison et la communication client
++- respecter les règles de remboursement et de service client
++- signaler immédiatement les incidents ou erreurs de stock
++
++### 3.4 Frais et commissions
++
++- La plateforme peut appliquer une commission sur les ventes.
++- Les frais doivent être affichés de manière claire avant validation de commande.
++- Les montants et méthodes de paiement doivent être documentés dans les conditions d’utilisation.
++
++## 4. Politique de retrait
++
++- Les retraits sont soumis à l’identité vérifiée du vendeur et à la validation des conditions de compte.
++- Un seuil minimum peut être appliqué selon les règles de la plateforme.
++- Les demandes de retrait doivent être enregistrées avec le statut, le montant et la méthode de paiement.
++- Les demandes peuvent être refusées ou suspendues en cas de risque de fraude, de litige ou de document KYC incomplet.
++
++## 5. Politique de remboursement et litiges
++
++- Le vendeur et l’acheteur doivent être informés des conditions de remboursement avant la commande.
++- Les remboursements sont traités selon le statut du paiement, le type de produit, et la validité du motif.
++- Les disputes doivent être documentées et suivies avec un historique de décisions.
++- La plateforme agit comme médiateur et peut intervenir pour vérifier la conformité au règlement.
++
++## 6. Politique de modération
++
++- Les signalements peuvent être soumis par les utilisateurs sur une boutique ou un produit.
++- Les signalements sont classés, triés et examinés par l’équipe support/admin.
++- Des mesures peuvent inclure : avertissement, suspension temporaire, blocage de vente, suppression de produit ou clôture de boutique.
++- Le vendeur a la possibilité de répondre ou de corriger la situation avant fermeture définitive, selon le cas.
++
++## 7. Conformité locale et sécurité
++
++- Vérifier la conformité avec les règles du pays d’exploitation, notamment sur la protection des données et le commerce électronique.
++- Vérifier les obligations fiscales, la facturation et la fiscalité locale lorsque la plateforme opère à l’échelle du pays.
++- Les paiements doivent être effectués via des intégrations sécurisées et vérifiés avant toute activation en production.
++
++## 8. À finaliser avant lancement live
++
++- afficher les conditions générales d’utilisation et la politique de confidentialité dans le front office
++- mettre à disposition une page d’aide / FAQ vendeur
++- ajouter un règlement de service client et de médiation des litiges
++- finaliser la procédure de validation KYC et de paiement vers les vendeurs
++- préparer le switch de paiement FedaPay live via un panneau admin de configuration sécurisée
++
++## 9. Position actuelle du projet
++
++La plateforme a déjà les éléments de base pour :
++
++- stocker les vérifications vendeur
++- mettre en place les demandes de retrait
++- gérer les signalements
++- enregistrer les paiements et les ordres
++- préparer la mise en production FedaPay
++
++Il reste à finaliser la mise en place d’un mode de paiement configurable depuis l’admin, la documentation publique et la validation QA finale avant le lancement.
+-- 
+2.53.0.windows.1
+
