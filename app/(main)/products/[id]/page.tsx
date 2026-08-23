@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { AnimatedSection } from '@/components/AnimatedSection'
 import { AnimatedCard } from '@/components/AnimatedCard'
-import { AddToCartButton } from '@/components/AddToCartButton'
+import { ProductPurchaseOptions } from '@/components/ProductPurchaseOptions'
+import { ProductSalesActions, type ProductSalesActionsProps } from '@/components/ProductSalesActions'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { ProductPromoCard } from '../../../../components/ProductPromoCard'
 import {
@@ -15,7 +17,6 @@ import {
 import { ShareButton } from '@/components/ShareButton'
 import { RichTextRenderer } from '@/components/RichTextRenderer'
 import { ProductReviews } from '@/components/ProductReviews'
-import { ProductGalleryCarousel } from '@/components/ProductGalleryCarousel'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -53,9 +54,27 @@ interface ProductSalesPageSection {
 }
 
 interface ProductMetadata {
+  autoDiscount?: {
+    enabled?: boolean
+    type?: 'FIXED' | 'PERCENT'
+    value?: number | string | null
+  }
+  availability?: {
+    scope?: 'PARTOUT' | 'MON_UNIVERSITE' | 'AUTRES_UNIVERSITES' | 'HORS_UNIVERSITE'
+    note?: string | null
+  }
   visibility?: {
     showStock?: boolean
     showRelatedProducts?: boolean
+  }
+  seo?: {
+    ogTitle?: string | null
+    ogDescription?: string | null
+    ogImage?: string | null
+  }
+  pickup?: {
+    available?: boolean
+    location?: string | null
   }
   gallery?: Array<string | null | undefined>
   salesPage?: {
@@ -70,9 +89,6 @@ interface ProductMetadata {
     body?: string
     sections?: ProductSalesPageSection[]
   }
-  availability?: {
-    note?: string
-  }
   delivery?: Record<string, unknown>
 }
 
@@ -81,7 +97,7 @@ function getSectionItems(content: SectionContent): SectionItem[] {
   return Array.isArray(items) ? items : []
 }
 
-function renderSalesPageSection(section: ProductSalesPageSection) {
+function renderSalesPageSection(section: ProductSalesPageSection, purchaseProduct: ProductSalesActionsProps['product']) {
   const { type, content } = section
   const sectionItems = getSectionItems(content)
   switch (type) {
@@ -100,19 +116,7 @@ function renderSalesPageSection(section: ProductSalesPageSection) {
             <p className="text-sm leading-7 text-muted-foreground mb-5">
               {content.subheadline ?? 'Sous-titre de présentation.'}
             </p>
-            {content.ctaUrl && content.ctaText ? (
-              <Link
-                href={content.ctaUrl}
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold transition"
-                style={
-                  content.ctaColor
-                    ? { background: content.ctaColor, color: 'var(--primary-foreground)' }
-                    : undefined
-                }
-              >
-                {content.ctaText}
-              </Link>
-            ) : null}
+            <ProductSalesActions product={purchaseProduct} label={content.ctaText ?? 'Acheter maintenant'} color={content.ctaColor} />
           </div>
         </div>
       )
@@ -167,10 +171,8 @@ function renderSalesPageSection(section: ProductSalesPageSection) {
       return (
         <div className="rounded-3xl border border-border bg-primary p-8 text-primary-foreground">
           <h3 className="text-2xl font-bold mb-3">{content.headline ?? 'Prêt à agir ?'}</h3>
-          {content.buttonUrl && content.buttonText ? (
-            <Link href={content.buttonUrl} className="inline-flex items-center justify-center rounded-2xl bg-primary-foreground px-6 py-3 text-sm font-semibold text-primary transition hover:bg-primary/90">
-              {content.buttonText}
-            </Link>
+          {content.buttonText ? (
+              <ProductSalesActions product={purchaseProduct} label={content.buttonText ?? 'Acheter maintenant'} />
           ) : null}
         </div>
       )
@@ -202,10 +204,44 @@ async function getProduct(id: string) {
           include: { user: { select: { name: true, email: true } } },
           orderBy: { created_at: 'desc' },
         },
+        pricing_tiers: { orderBy: { position: 'asc' } },
+          variants: { where: { is_active: true }, orderBy: { position: 'asc' } },
+        delivery_zones: { where: { is_active: true }, orderBy: { position: 'asc' } },
       },
     })
   } catch {
     return null
+  }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const product = await getProduct(id)
+  if (!product) return { title: 'Produit introuvable | Campus Market' }
+
+  const metadata = (product.metadata ?? {}) as ProductMetadata
+  const title = product.seo_title?.trim() || product.name
+  const description = product.seo_description?.trim() || product.description?.slice(0, 160) || `Découvrez ${product.name} sur Campus Market.`
+  const image = product.seo_thumbnail_url || metadata.seo?.ogImage || product.image_url || undefined
+
+  return {
+    title,
+    description,
+    keywords: product.seo_keywords?.split(',').map((keyword) => keyword.trim()).filter(Boolean),
+    alternates: { canonical: `/products/${product.id}` },
+    openGraph: {
+      title: metadata.seo?.ogTitle?.trim() || title,
+      description: metadata.seo?.ogDescription?.trim() || description,
+      type: 'website',
+      url: `/products/${product.id}`,
+      images: image ? [{ url: image, alt: product.name }] : undefined,
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title: metadata.seo?.ogTitle?.trim() || title,
+      description: metadata.seo?.ogDescription?.trim() || description,
+      images: image ? [image] : undefined,
+    },
   }
 }
 
@@ -223,16 +259,26 @@ export default async function ProductDetailPage({
   const { data: { user } } = await supabase.auth.getUser()
 
   const metadata = (product.metadata ?? {}) as ProductMetadata
+  const availabilityScope = metadata.availability?.scope ?? 'PARTOUT'
+  const autoDiscount = metadata.autoDiscount
+  const autoDiscountConfig = autoDiscount?.enabled && autoDiscount.value != null
+    ? {
+        enabled: true,
+        type: autoDiscount.type ?? 'FIXED',
+        value: Number(autoDiscount.value),
+      }
+    : null
   const showStockField = metadata.visibility?.showStock ?? true
-  const galleryImages = Array.isArray(metadata.gallery)
-    ? metadata.gallery.filter((item): item is string => typeof item === 'string')
-    : []
   const salesPageHero = metadata.salesPage?.hero
   const salesPageBody = typeof metadata.salesPage?.body === 'string' ? metadata.salesPage.body : ''
   const salesPageSections = Array.isArray(metadata.salesPage?.sections)
     ? metadata.salesPage.sections.filter((section) => section.isVisible !== false)
     : []
   const availabilityNote = metadata.availability?.note ?? ''
+  const delivery = metadata.delivery as { enabled?: boolean; fee?: number | string | null; freeThreshold?: number | string | null } | undefined
+  const hasDeliveryInformation = Boolean(
+    metadata.pickup?.available || delivery?.enabled || product.delivery_zones.length > 0
+  )
 
   const avgRating = product.reviews.length > 0
     ? product.reviews.reduce((acc, r) => acc + r.rating, 0) / product.reviews.length
@@ -241,7 +287,35 @@ export default async function ProductDetailPage({
   // null = non connecté ; sinon true seulement si l'utilisateur n'a pas déjà noté ce produit
   const canReview = user ? !product.reviews.some((review) => review.user_id === user.id) : null
 
+  const buyer = user
+    ? await prisma.user.findUnique({ select: { university: true }, where: { id: user.id } })
+    : null
+  const sellerUniversity = product.shop?.seller?.user?.university ?? null
+  const canBuyByUniversity = availabilityScope === 'PARTOUT'
+    || (availabilityScope === 'MON_UNIVERSITE' && Boolean(buyer?.university) && buyer?.university === sellerUniversity)
+    || (availabilityScope === 'HORS_UNIVERSITE' && !buyer?.university)
+    || (availabilityScope === 'AUTRES_UNIVERSITES' && Boolean(buyer?.university) && Boolean(sellerUniversity) && buyer?.university !== sellerUniversity)
+  const universityAccessMessage = !canBuyByUniversity
+      ? availabilityScope === 'MON_UNIVERSITE'
+        ? 'Ce produit est réservé aux étudiants de l’université du vendeur.'
+        : availabilityScope === 'AUTRES_UNIVERSITES'
+          ? 'Ce produit est réservé aux étudiants d’une autre université.'
+          : 'Ce produit est réservé aux acheteurs hors université.'
+    : null
+
   const otherProducts = product.shop?.products.filter(p => p.id !== product.id) ?? []
+  const purchaseProduct: ProductSalesActionsProps['product'] = {
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image_url: product.image_url,
+    stock: product.stock,
+    stock_mode: product.stock_mode,
+    shop_id: product.shop?.id ?? '',
+    shop_name: product.shop?.name ?? '',
+    shop_slug: product.shop?.slug ?? '',
+    type: product.type,
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -302,7 +376,7 @@ export default async function ProductDetailPage({
               </div>
             )}
 
-            {product.stock <= 5 && product.stock > 0 && (
+            {product.stock_mode === 'TRACKED' && product.stock <= 5 && product.stock > 0 && (
               <div
                 className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold"
                 style={{ background: '#F59E0B', color: '#0A0A0A' }}
@@ -310,7 +384,7 @@ export default async function ProductDetailPage({
                 Plus que {product.stock} en stock !
               </div>
             )}
-            {product.stock === 0 && (
+            {(product.stock_mode === 'OUT_OF_STOCK' || (product.stock_mode === 'TRACKED' && product.stock === 0)) && (
               <div
                 className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold"
                 style={{ background: '#F87171', color: '#0A0A0A' }}
@@ -407,8 +481,27 @@ export default async function ProductDetailPage({
               </div>
             ) : null}
 
-            {galleryImages.length > 0 ? (
-              <ProductGalleryCarousel images={galleryImages} productName={product.name} />
+            {hasDeliveryInformation ? (
+              <div className="mb-6 rounded-3xl border border-border bg-[var(--surface)] p-5 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">Livraison et retrait</p>
+                <div className="mt-3 space-y-2">
+                  {metadata.pickup?.available ? (
+                    <p>Retrait sur place{metadata.pickup.location ? ` : ${metadata.pickup.location}` : ''}</p>
+                  ) : null}
+                  {delivery?.enabled ? (
+                    <p>
+                      Livraison disponible{delivery.fee != null ? ` à partir de ${new Intl.NumberFormat('fr-FR').format(Number(delivery.fee))} FCFA` : ''}
+                      {delivery.freeThreshold != null ? `, gratuite dès ${new Intl.NumberFormat('fr-FR').format(Number(delivery.freeThreshold))} FCFA` : ''}.
+                    </p>
+                  ) : null}
+                  {product.delivery_zones.map((zone) => (
+                    <p key={zone.id}>
+                      {zone.name}{zone.fee != null ? ` : ${new Intl.NumberFormat('fr-FR').format(Number(zone.fee))} FCFA` : ' : gratuit'}
+                      {zone.estimated_min_days != null ? `, ${zone.estimated_min_days}${zone.estimated_max_days != null ? `-${zone.estimated_max_days}` : ''} jour${zone.estimated_max_days === 1 ? '' : 's'}` : ''}
+                    </p>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             {(salesPageHero || salesPageBody) ? (
@@ -427,11 +520,7 @@ export default async function ProductDetailPage({
                       <p className="text-sm leading-7 text-muted-foreground mb-5">
                         {salesPageHero.subheadline ?? 'Sous-titre de présentation.'}
                       </p>
-                      {salesPageHero.ctaUrl && salesPageHero.ctaText ? (
-                        <Link href={salesPageHero.ctaUrl} className="inline-flex items-center justify-center rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
-                          {salesPageHero.ctaText}
-                        </Link>
-                      ) : null}
+                      <ProductSalesActions product={purchaseProduct} label={salesPageHero.ctaText ?? 'Acheter maintenant'} color={metadata.salesPage?.ctaColor} />
                     </div>
                   </div>
                 ) : null}
@@ -446,7 +535,7 @@ export default async function ProductDetailPage({
               <div className="mb-6 space-y-6">
                 {salesPageSections.map((section, index) => (
                   <div key={`${section.id ?? index}-${section.type}`}>
-                    {renderSalesPageSection(section)}
+                    {renderSalesPageSection(section, purchaseProduct)}
                   </div>
                 ))}
               </div>
@@ -455,15 +544,18 @@ export default async function ProductDetailPage({
             {showStockField && (
               <div className="flex items-center gap-2 mb-6">
                 <CheckCircle size={14} style={{
-                  color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
+                  color: product.stock_mode === 'OUT_OF_STOCK' || (product.stock_mode === 'TRACKED' && product.stock <= 0) ? 'var(--destructive)' : 'var(--success)'
                 }} />
                 <span className="text-xs font-medium" style={{
-                  color: product.stock > 0 ? 'var(--success)' : 'var(--destructive)'
+                  color: product.stock_mode === 'OUT_OF_STOCK' || (product.stock_mode === 'TRACKED' && product.stock <= 0) ? 'var(--destructive)' : 'var(--success)'
                 }}>
-                  {product.stock > 0
-                    ? `${product.stock} disponible${product.stock > 1 ? 's' : ''}`
-                    : 'Rupture de stock'
-                  }
+                  {product.stock_mode === 'UNLIMITED'
+                    ? 'Disponible sans limite'
+                    : product.stock_mode === 'PREORDER'
+                      ? 'Disponible en précommande'
+                      : product.stock_mode === 'OUT_OF_STOCK' || product.stock <= 0
+                        ? 'Rupture de stock'
+                        : `${product.stock} disponible${product.stock > 1 ? 's' : ''}`}
                 </span>
               </div>
             )}
@@ -471,18 +563,35 @@ export default async function ProductDetailPage({
             {/* Actions */}
             <div className="flex gap-3 mb-8">
               {user ? (
-                <AddToCartButton
+                <ProductPurchaseOptions
                   product={{
                     id: product.id,
                     name: product.name,
                     price: Number(product.price),
                     image_url: product.image_url,
                     stock: product.stock,
+                    stock_mode: product.stock_mode,
                     shop_id: product.shop?.id ?? '',
                     shop_name: product.shop?.name ?? '',
                     shop_slug: product.shop?.slug ?? '',
                     type: product.type,
+                    auto_discount: autoDiscountConfig,
                   }}
+                  pricingTiers={product.pricing_tiers.map((tier) => ({
+                    id: tier.id,
+                    label: tier.label,
+                    price: Number(tier.price),
+                    is_default: tier.is_default,
+                  }))}
+                  variants={product.variants.map((variant) => ({
+                    id: variant.id,
+                    name: variant.name,
+                    price_delta: Number(variant.price_delta),
+                    stock_delta: variant.stock_delta,
+                    is_active: variant.is_active,
+                  }))}
+                  canPurchase={canBuyByUniversity}
+                  accessMessage={universityAccessMessage}
                 />
               ) : (
                 <Link

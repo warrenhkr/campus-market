@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 
 interface ProductPromoCardProps {
   price: number
@@ -51,15 +50,9 @@ export function ProductPromoCard({
   originalPrice,
   promoLabel,
   promoEndAt,
-  ctaText,
-  ctaUrl,
-  ctaStyle = 'PRIMARY',
 }: ProductPromoCardProps) {
   const countdown = useCountdown(promoEndAt)
   const hasSale = originalPrice && originalPrice > price
-  const ctaClass = ctaStyle === 'SECONDARY'
-    ? 'bg-[var(--surface)] text-foreground border border-border hover:bg-[var(--surface-2)]'
-    : 'bg-primary text-primary-foreground hover:bg-primary-hover'
 
   return (
     <div className="space-y-4 mb-6 rounded-3xl border border-border bg-[var(--surface)] p-6">
@@ -113,16 +106,6 @@ export function ProductPromoCard({
             </p>
           )}
         </div>
-        {ctaText && ctaUrl && (
-          <Link
-            href={ctaUrl}
-            className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition ${ctaClass}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {ctaText}
-          </Link>
-        )}
       </div>
     </div>
   )

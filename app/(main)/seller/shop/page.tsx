@@ -65,17 +65,27 @@ export default async function SellerShopPage() {
   const avgRating = totalReviews.length > 0
     ? totalReviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews.length
     : 0
+  const shopStatus = String(shopSettingsPayload.status ?? 'ACTIVE')
+  const statusMeta = {
+    ACTIVE: { label: 'Boutique active', color: '#15803D', background: '#DCFCE7' },
+    PAUSED: { label: 'Boutique en pause', color: '#B45309', background: '#FEF3C7' },
+    MAINTENANCE: { label: 'En maintenance', color: '#B91C1C', background: '#FEE2E2' },
+  }[shopStatus as 'ACTIVE' | 'PAUSED' | 'MAINTENANCE'] ?? {
+    label: shopStatus,
+    color: 'var(--muted-foreground)',
+    background: 'var(--muted)',
+  }
 
   return (
-    <div className="w-full px-4 pb-12 pt-4 sm:px-6 lg:px-8 md:pt-5">
+    <div className="w-full pb-12 pt-2 md:pt-4">
 
       {/* Header boutique */}
       <AnimatedSection delay={0}>
-        <Card className="rounded-3xl border border-border p-8 mb-8 relative overflow-hidden">
+        <Card className="rounded-3xl border-0 p-6 sm:p-8 mb-8 relative overflow-hidden shadow-sm">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] opacity-10 pointer-events-none"
             style={{ background: 'var(--primary)', transform: 'translate(30%, -30%)' }} />
 
-          <div className="flex items-start gap-6 relative">
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
               style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-border)' }}>
               {shop.image_url ? (
@@ -108,17 +118,16 @@ export default async function SellerShopPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span>/ {shop.slug}</span>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="truncate text-xs" style={{ color: 'var(--muted-foreground)' }}>{shopUrl}</span>
-                  <ShareLinkButton url={shopUrl} />
+                  <span className="rounded-full px-3 py-1 font-semibold" style={{ color: statusMeta.color, background: statusMeta.background }}>
+                    {statusMeta.label}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 shrink-0">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:shrink-0">
               <Button asChild variant="secondary" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
                 style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
                 <Link href={`/shop/${shop.slug}`}>
@@ -131,20 +140,17 @@ export default async function SellerShopPage() {
                   <Settings2 size={12} /> Paramètres
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:scale-105"
-                style={{ color: 'var(--foreground)' }}>
-                <Link href={shopUrl} target="_blank" rel="noreferrer">
-                  Partager
-                </Link>
-              </Button>
+              <div className="w-full sm:w-auto">
+                <ShareLinkButton url={shopUrl} />
+              </div>
             </div>
           </div>
         </Card>
       </AnimatedSection>
 
       <AnimatedSection delay={0.05}>
-        <Card className="rounded-3xl border border-border p-8 mb-8">
-          <CardHeader className="space-y-3">
+        <Card className="rounded-3xl border-0 p-0 sm:p-8 mb-0 sm:mb-8 shadow-sm">
+          <CardHeader className="space-y-3 p-4 sm:p-0">
             <CardTitle className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
               Paramètres de la boutique
             </CardTitle>
@@ -152,7 +158,7 @@ export default async function SellerShopPage() {
               Gérez les informations générales, l’apparence, la livraison, les préférences de paiement et les réseaux sociaux de votre boutique.
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-0">
             <ShopSettingsForm
               shop={{
                 id: String(shopSettingsPayload.id ?? ''),
@@ -219,7 +225,7 @@ export default async function SellerShopPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {shop.products.map((product, i) => (
               <AnimatedCard key={product.id} index={i}>
-                <Card className="rounded-3xl overflow-hidden border border-border">
+                <Card className="rounded-3xl overflow-hidden border-0 shadow-sm">
                   <div className="relative overflow-hidden flex items-center justify-center"
                     style={{ aspectRatio: '4/3', background: 'var(--surface-2)' }}>
                     {product.image_url ? (

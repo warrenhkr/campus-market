@@ -167,7 +167,6 @@ export interface ProductBuilderInitialData {
       showStock?: boolean
       showRelatedProducts?: boolean
     }
-    gallery?: Array<string | null> | null
     /** @deprecated les variantes viennent désormais de `variants` (table relationnelle) — conservé pour lire d'anciens produits pas encore migrés */
     variants?: Array<{ name?: string | null; priceDelta?: number | string | null; stockDelta?: number | string | null }> | null
     availability?: { scope?: AvailabilityScope; note?: string | null } | null
@@ -208,8 +207,8 @@ interface ProductBuilderFormProps {
 
 const builderTabs = [
   { key: 'information', label: 'Informations', description: 'Renseigne le nom, la description, le type et la catégorie du produit.' },
-  { key: 'medias', label: 'Médias', description: 'Ajoute les images principales et la galerie produit pour donner envie.' },
-  { key: 'prix', label: 'Prix', description: 'Définis le prix, la promotion, le CTA et les incitations à l’achat.' },
+  { key: 'medias', label: 'Médias', description: 'Ajoute une image principale pour présenter clairement le produit.' },
+  { key: 'prix', label: 'Prix', description: 'Définis le prix, la promotion et les incitations à l’achat.' },
   { key: 'stock', label: 'Stock', description: 'Gère la disponibilité, le stock, les variantes, la livraison et le pickup.' },
   { key: 'page-de-vente', label: 'Page de vente', description: 'Rédige une page commerciale avec un hero et un contenu riche en direct.' },
   { key: 'faq', label: 'Questions fréquentes', description: 'Réponds aux questions les plus posées sur ce produit.' },
@@ -257,10 +256,11 @@ export function ProductBuilderForm({
   const [imageUrl, setImageUrl] = useState<string | null>(initialState.image_url ?? null)
   const [promoLabel, setPromoLabel] = useState(initialState.promo_label ?? '')
   const [promoEndAt, setPromoEndAt] = useState(initialState.promo_end_at ? new Date(initialState.promo_end_at).toISOString().slice(0, 16) : '')
-  const [ctaText, setCtaText] = useState(initialState.cta_text ?? '')
-  const [ctaUrl, setCtaUrl] = useState(initialState.cta_url ?? '')
-  const [ctaStyle, setCtaStyle] = useState<'primary' | 'secondary'>((initialState.cta_style ?? 'PRIMARY').toLowerCase() as 'primary' | 'secondary')
+  const ctaText = initialState.cta_text ?? ''
+  const ctaUrl = initialState.cta_url ?? ''
+  const ctaStyle = (initialState.cta_style ?? 'PRIMARY').toUpperCase()
   const [isAvailable, setIsAvailable] = useState(initialState.is_available ?? true)
+  const [slugError, setSlugError] = useState('')
 
   const [ogTitle, setOgTitle] = useState(initialMetadata.seo?.ogTitle ?? '')
   const [ogDescription, setOgDescription] = useState(initialMetadata.seo?.ogDescription ?? '')
@@ -270,17 +270,12 @@ export function ProductBuilderForm({
   const [pageHeroSubheadline, setPageHeroSubheadline] = useState(initialMetadata.salesPage?.hero?.subheadline ?? '')
   const [pageHeroImageUrl, setPageHeroImageUrl] = useState<string | null>(initialMetadata.salesPage?.hero?.imageUrl ?? null)
   const [pageHeroCtaText, setPageHeroCtaText] = useState(initialMetadata.salesPage?.hero?.ctaText ?? '')
-  const [pageHeroCtaUrl, setPageHeroCtaUrl] = useState(initialMetadata.salesPage?.hero?.ctaUrl ?? '')
   const [pageHeroCtaColor, setPageHeroCtaColor] = useState(initialMetadata.salesPage?.ctaColor ?? '')
   const [pageContent, setPageContent] = useState(initialMetadata.salesPage?.body ?? '')
 
   // Resync image/cta color when initialData changes (useful on edit page when initialData is loaded async)
   useEffect(() => {
-    // Fallback order for product cover image:
-    // 1) product.image_url (first-class column)
-    // 2) metadata.gallery[0] (legacy stored gallery)
-    const fallbackImage = initialState.image_url ?? (Array.isArray(initialMetadata.gallery) && initialMetadata.gallery.length > 0 ? initialMetadata.gallery[0] : null) ?? null
-    setImageUrl(fallbackImage)
+    setImageUrl(initialState.image_url ?? null)
     setPageHeroImageUrl(initialMetadata.salesPage?.hero?.imageUrl ?? null)
     setSeoThumbnailUrl(initialState.seo_thumbnail_url ?? initialMetadata.seo?.ogImage ?? '')
     setOgImageUrl(initialMetadata.seo?.ogImage ?? null)
@@ -488,7 +483,7 @@ export function ProductBuilderForm({
         const hasBody = !!section.content.body?.trim()
         if (!hasTitle && !hasBody) return null
         return (
-          <div key={section.id} className="rounded-3xl border border-border bg-[var(--surface)] p-5">
+          <div key={section.id} className="rounded-3xl bg-[var(--surface)] p-5 shadow-sm">
             {hasTitle ? <h3 className="text-xl font-semibold text-foreground">{section.content.title}</h3> : null}
             {hasBody ? <p className="mt-3 text-sm leading-7 text-muted-foreground">{section.content.body}</p> : null}
           </div>
@@ -499,7 +494,7 @@ export function ProductBuilderForm({
         const items = Array.isArray(section.content.items) ? section.content.items.filter((i) => !!(i.title?.trim() || i.description?.trim())) : []
         if (!hasTitle && items.length === 0) return null
         return (
-          <div key={section.id} className="rounded-3xl border border-border bg-[var(--surface)] p-5">
+          <div key={section.id} className="rounded-3xl bg-[var(--surface)] p-5 shadow-sm">
             {hasTitle ? <h3 className="text-xl font-semibold text-foreground">{section.content.title}</h3> : null}
             {items.length > 0 ? (
               <div className="mt-4 space-y-3">
@@ -519,7 +514,7 @@ export function ProductBuilderForm({
         const items = Array.isArray(section.content.items) ? section.content.items.filter((i) => !!(i.question?.trim() || i.answer?.trim())) : []
         if (!hasTitle && items.length === 0) return null
         return (
-          <div key={section.id} className="rounded-3xl border border-border bg-[var(--surface)] p-5">
+          <div key={section.id} className="rounded-3xl bg-[var(--surface)] p-5 shadow-sm">
             {hasTitle ? <h3 className="text-xl font-semibold text-foreground">{section.content.title}</h3> : null}
             {items.length > 0 ? (
               <div className="mt-4 space-y-4">
@@ -539,7 +534,7 @@ export function ProductBuilderForm({
         const hasButton = !!section.content.buttonText?.trim()
         if (!hasHeadline && !hasButton) return null
         return (
-          <div key={section.id} className="rounded-3xl border border-border bg-[var(--surface)] p-6 text-center">
+          <div key={section.id} className="rounded-3xl bg-[var(--surface)] p-6 text-center shadow-sm">
             {hasHeadline ? <p className="text-xl font-semibold text-foreground">{section.content.headline}</p> : null}
             {hasButton ? (
               <a href={section.content.buttonUrl || '#'} className="mt-5 inline-flex rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
@@ -556,7 +551,7 @@ export function ProductBuilderForm({
         const hasImage = !!heroImageUrl
         if (!hasHeadline && !hasSub && !hasImage) return null
         return (
-          <div key={section.id} className="rounded-3xl border border-border bg-[var(--surface)] p-6">
+          <div key={section.id} className="rounded-3xl bg-[var(--surface)] p-6 shadow-sm">
             {heroImageUrl ? (
               <div className="relative h-64 overflow-hidden rounded-3xl mb-6">
                 <Image src={heroImageUrl} alt={section.content.headline || 'Hero'} fill className="object-cover" />
@@ -732,11 +727,6 @@ export function ProductBuilderForm({
     setFaqImportOpen(false)
   }
 
-  const [galleryImages, setGalleryImages] = useState<(string | null)[]>(
-    Array.isArray(initialMetadata.gallery)
-      ? initialMetadata.gallery.map((item) => item ?? null)
-      : []
-  )
   const [variants, setVariants] = useState<Array<{ name: string; priceDelta: string; stockDelta: string }>>(
     Array.isArray(initialState.variants) && initialState.variants.length > 0
       ? initialState.variants.map((variant) => ({
@@ -825,8 +815,11 @@ export function ProductBuilderForm({
       setSelectedTab('prix')
       return
     }
-    if (ctaUrl && !ctaText.trim()) {
-      toast.error('Le texte du CTA est requis si une URL est définie')
+    const currentSlugError = slug && !/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(slug)
+      ? 'Format invalide : minuscules, chiffres et tirets uniquement, sans tiret au début ou à la fin.'
+      : ''
+    if (currentSlugError || slugError) {
+      toast.error(currentSlugError || slugError)
       setSelectedTab('prix')
       return
     }
@@ -914,7 +907,7 @@ export function ProductBuilderForm({
                 subheadline: pageHeroSubheadline || null,
                 imageUrl: pageHeroImageUrl || null,
                 ctaText: pageHeroCtaText || null,
-                ctaUrl: pageHeroCtaUrl || null,
+                ctaUrl: null,
               },
               ctaColor: pageHeroCtaColor || null,
               sections: salesPageSections.length > 0 ? normalizeSections(salesPageSections) : null,
@@ -924,7 +917,6 @@ export function ProductBuilderForm({
               showStock,
               showRelatedProducts,
             },
-            gallery: galleryImages.filter(Boolean),
             availability: {
               scope: availabilityScope,
               note: availabilityNote || null,
@@ -1008,14 +1000,14 @@ export function ProductBuilderForm({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <div className="flex min-w-full gap-2 rounded-3xl border border-border bg-[var(--surface)] px-2 py-2">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-[var(--surface)] p-1">
+        <div className="flex min-w-max gap-1">
           {builderTabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setSelectedTab(tab.key)}
-              className={`rounded-2xl px-4 py-2 text-xs font-semibold transition ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-semibold leading-5 transition ${
                 selectedTab === tab.key
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-transparent text-foreground/80 hover:bg-[var(--surface-2)]'
@@ -1144,52 +1136,12 @@ export function ProductBuilderForm({
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-3xl border border-border p-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                      Galerie produit
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {galleryImages.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Ajoute des images supplémentaires pour enrichir la page de vente.
-                      </p>
-                    ) : null}
-
-                    {galleryImages.map((image, index) => (
-                      <div key={index} className="space-y-2 rounded-3xl border border-border p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                            Image {index + 1}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setGalleryImages((current) => current.filter((_, i) => i !== index))}
-                            className="text-xs font-semibold text-destructive"
-                          >
-                            Supprimer
-                          </button>
-                        </div>
-                        <ImageUpload
-                          value={image}
-                          onChange={(value) => setGalleryImages((current) => current.map((item, i) => i === index ? value : item))}
-                          bucket="products"
-                        />
-                      </div>
-                    ))}
-
-                    <Button type="button" variant="outline" size="sm" onClick={() => setGalleryImages((current) => [...current, null])}>
-                      Ajouter une image de galerie
-                    </Button>
-                  </CardContent>
-                </Card>
               </div>
             </AnimatedSectionContent>
           )}
 
           {selectedTab === 'prix' && (
-            <AnimatedSectionContent title="Prix" description="Prix principal, prix d’origine et CTA marketing." >
+            <AnimatedSectionContent title="Prix" description="Prix principal, promotion et incitations à l’achat." >
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
@@ -1229,21 +1181,27 @@ export function ProductBuilderForm({
                     URL du produit
                   </label>
                   <p className="text-xs" style={{ color: 'var(--subtle)' }}>Crée un lien personnalisé facile à retenir</p>
-                  <div className="flex items-stretch overflow-hidden rounded-xl" style={{ border: '1px solid var(--border)' }}>
-                    <span
-                      className="flex items-center px-3 text-xs shrink-0"
-                      style={{ background: 'var(--surface-2)', color: 'var(--muted-foreground)' }}
-                    >
-                      {shopSlug ? `campus-market.com/${shopSlug}/` : 'campus-market.com/…/'}
-                    </span>
-                    <input
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))}
-                      placeholder="mon-produit"
-                      className="h-10 flex-1 px-3 text-sm outline-none"
-                      style={{ background: 'var(--surface-2)', color: 'var(--foreground)' }}
-                    />
-                  </div>
+                  <p className="text-xs" style={{ color: 'var(--subtle)' }}>
+                    Utilise uniquement des lettres minuscules, des chiffres et des tirets. Le lien doit commencer et finir par une lettre ou un chiffre, avec 80 caractères maximum.
+                  </p>
+                  <input
+                    value={slug}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setSlug(value)
+                      setSlugError(
+                        value && !/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(value)
+                          ? 'Format invalide : minuscules, chiffres et tirets uniquement, sans tiret au début ou à la fin.'
+                          : ''
+                      )
+                    }}
+                    placeholder="mon-produit"
+                    aria-label="Identifiant de l'URL du produit"
+                    aria-invalid={Boolean(slugError)}
+                    className="h-10 w-full rounded-xl px-3 text-sm outline-none"
+                    style={{ background: 'var(--surface-2)', border: `1px solid ${slugError ? 'var(--destructive)' : 'var(--border)'}`, color: 'var(--foreground)' }}
+                  />
+                  {slugError && <p className="text-xs text-destructive" role="alert">{slugError}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1388,49 +1346,6 @@ export function ProductBuilderForm({
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                      Texte du CTA
-                    </label>
-                    <Input
-                      value={ctaText}
-                      onChange={(e) => setCtaText(e.target.value)}
-                      placeholder="Ex: J'en profite"
-                      className="h-10"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                      URL du CTA
-                    </label>
-                    <Input
-                      value={ctaUrl}
-                      onChange={(e) => setCtaUrl(e.target.value)}
-                      placeholder="https://"
-                      type="url"
-                      className="h-10"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                    Style du CTA
-                  </label>
-                  <Select value={ctaStyle} onValueChange={(value) => setCtaStyle(value as 'primary' | 'secondary')}>
-                    <SelectTrigger className="w-full" size="default">
-                      <SelectValue placeholder="Style du bouton" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="primary">Primaire</SelectItem>
-                      <SelectItem value="secondary">Secondaire</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </AnimatedSectionContent>
           )}
@@ -1522,7 +1437,7 @@ export function ProductBuilderForm({
 
                 <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Disponibilité universitaire</p>
-                  <p className="mt-1 text-xs">Choisis qui peut voir et acheter ce produit.</p>
+                  <p className="mt-1 text-xs">Choisis qui peut voir et acheter ce produit. La règle sera revérifiée au paiement.</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {AVAILABILITY_SCOPE_OPTIONS.map((option) => (
                       <button
@@ -1552,10 +1467,12 @@ export function ProductBuilderForm({
                       style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                     />
                   </div>
+                  <p className="mt-3 text-xs">« Mon université » compare l’université de l’acheteur à celle de ta boutique. « Autres universités » exige une université différente.</p>
                 </div>
 
                 <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
-                  <p className="font-semibold text-foreground">Variantes</p>
+                  <p className="font-semibold text-foreground">Variantes de produit</p>
+                  <p className="mt-1 text-xs">Chaque variante peut modifier le prix et le stock disponibles au moment de l’achat.</p>
                   {variants.length === 0 && (
                     <p className="mt-3 text-sm">Ajoute des variantes si ton produit propose plusieurs options.</p>
                   )}
@@ -1575,27 +1492,38 @@ export function ProductBuilderForm({
                           </button>
                         </div>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                          <Input
-                            value={variant.name}
-                            onChange={(e) => setVariants((current) => current.map((item, i) => i === index ? { ...item, name: e.target.value } : item))}
-                            placeholder="Nom de la variante"
-                            className="h-10"
-                            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                          />
-                          <Input
-                            value={variant.priceDelta}
-                            onChange={(e) => setVariants((current) => current.map((item, i) => i === index ? { ...item, priceDelta: e.target.value } : item))}
-                            placeholder="+1500 ou -500"
-                            className="h-10"
-                            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                          />
-                          <Input
-                            value={variant.stockDelta}
-                            onChange={(e) => setVariants((current) => current.map((item, i) => i === index ? { ...item, stockDelta: e.target.value } : item))}
-                            placeholder="Impact stock"
-                            className="h-10"
-                            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                          />
+                          <label className="space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">Nom</span>
+                            <Input
+                              value={variant.name}
+                              onChange={(e) => setVariants((current) => current.map((item, i) => i === index ? { ...item, name: e.target.value } : item))}
+                              placeholder="Ex: Taille M"
+                              className="h-10"
+                              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                            />
+                          </label>
+                          <label className="space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">Écart de prix (FCFA)</span>
+                            <Input
+                              value={variant.priceDelta}
+                              onChange={(e) => setVariants((current) => current.map((item, i) => i === index ? { ...item, priceDelta: e.target.value } : item))}
+                              placeholder="Ex: 1500 ou -500"
+                              type="number"
+                              className="h-10"
+                              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                            />
+                          </label>
+                          <label className="space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">Écart de stock</span>
+                            <Input
+                              value={variant.stockDelta}
+                              onChange={(e) => setVariants((current) => current.map((item, i) => i === index ? { ...item, stockDelta: e.target.value } : item))}
+                              placeholder="Ex: 5 ou -1"
+                              type="number"
+                              className="h-10"
+                              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                            />
+                          </label>
                         </div>
                       </div>
                     ))}
@@ -1898,17 +1826,11 @@ export function ProductBuilderForm({
                           <Input
                             value={pageHeroCtaText}
                             onChange={(e) => setPageHeroCtaText(e.target.value)}
-                            placeholder="Texte du bouton"
+                            placeholder="Ex: Acheter maintenant"
                             className="h-10"
                             style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                           />
-                          <Input
-                            value={pageHeroCtaUrl}
-                            onChange={(e) => setPageHeroCtaUrl(e.target.value)}
-                            placeholder="URL du bouton"
-                            className="h-10"
-                            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                          />
+                          <p className="text-xs text-muted-foreground">Ce bouton ouvre directement le paiement du produit. Aucune URL à renseigner.</p>
                           <div className="flex items-center gap-2 mt-1">
                             <label className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Couleur du bouton</label>
                             <input
@@ -1964,14 +1886,15 @@ export function ProductBuilderForm({
                         <p className="text-sm leading-7 text-muted-foreground">
                           {pageHeroSubheadline || 'Sous-titre percutant pour donner envie de lire la suite.'}
                         </p>
-                        {pageHeroCtaText && pageHeroCtaUrl ? (
-                          <a
-                            href={pageHeroCtaUrl}
-                            className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition"
-                            style={pageHeroCtaColor ? { background: pageHeroCtaColor, color: 'var(--primary-foreground)' } : undefined}
-                          >
-                            {pageHeroCtaText}
-                          </a>
+                        {pageHeroCtaText ? (
+                          <div className="flex flex-wrap gap-3">
+                            <button type="button" disabled className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold opacity-80" style={pageHeroCtaColor ? { background: pageHeroCtaColor, color: 'var(--primary-foreground)' } : undefined}>
+                              {pageHeroCtaText}
+                            </button>
+                            <button type="button" disabled className="inline-flex items-center justify-center rounded-full border border-border bg-[var(--surface-2)] px-6 py-3 text-sm font-semibold text-foreground opacity-80">
+                              Ajouter au panier
+                            </button>
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -1980,6 +1903,18 @@ export function ProductBuilderForm({
                         <RichTextRenderer value={pageContent || ''} />
                       </div>
                     </div>
+                    {(pickupAvailable || deliveryEnabled || deliveryZones.some((zone) => zone.name.trim())) ? (
+                      <div className="rounded-3xl border border-border bg-[var(--surface)] p-6">
+                        <p className="text-sm font-semibold text-foreground">Livraison et retrait</p>
+                        <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                          {pickupAvailable ? <p>Retrait sur place{pickupLocation ? ` : ${pickupLocation}` : ''}</p> : null}
+                          {deliveryEnabled ? <p>Livraison disponible{deliveryFee ? ` à partir de ${deliveryFee} FCFA` : ''}.</p> : null}
+                          {deliveryZones.filter((zone) => zone.name.trim()).map((zone) => (
+                            <p key={zone.id}>{zone.name}{zone.fee ? ` : ${zone.fee} FCFA` : ' : gratuit'}{zone.estimatedMinDays ? `, ${zone.estimatedMinDays}${zone.estimatedMaxDays ? `-${zone.estimatedMaxDays}` : ''} jours` : ''}</p>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                     {salesPageSections.some((section) => section.isVisible) ? (
                       <div className="space-y-4">
                         {salesPageSections.map((section) => renderSectionPreview(section))}
@@ -2051,7 +1986,7 @@ export function ProductBuilderForm({
                   <p className="text-xs font-medium mb-2" style={{ color: 'var(--muted-foreground)' }}>Aperçu</p>
                   <div className="rounded-2xl border border-border bg-[var(--surface-2)] p-4">
                     <p className="text-xs" style={{ color: '#4D7C0F' }}>
-                      campus-market.com{shopSlug ? `/${shopSlug}` : ''}/{slug || 'mon-produit'}
+                      /{shopSlug ? `${shopSlug}/` : ''}{slug || 'mon-produit'}
                     </p>
                     <p className="mt-1 text-base font-medium truncate" style={{ color: '#1a0dab' }}>
                       {seoProductTitle || name || 'Titre de la page'}

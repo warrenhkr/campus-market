@@ -35,7 +35,7 @@ export default function ProductCard({ product, index = 0 }: ProductProps) {
 
   return (
     <AnimatedCard index={index}>
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)' }}>
         <div className="relative flex items-center justify-center" style={{ aspectRatio: '16/9', background: 'var(--surface-2)' }}>
           {product.image_url ? (
             <Image src={product.image_url} alt={product.name} fill className="object-cover" />
