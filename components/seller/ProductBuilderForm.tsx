@@ -1000,7 +1000,7 @@ export function ProductBuilderForm({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-[var(--surface)] p-1">
+      <div className="overflow-x-auto border-0 bg-transparent p-0">
         <div className="flex min-w-max gap-1">
           {builderTabs.map((tab) => (
             <button
@@ -1019,7 +1019,7 @@ export function ProductBuilderForm({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+      <div className="border-0 bg-transparent px-0 py-2 text-sm text-muted-foreground">
         <p className="font-semibold text-foreground mb-2">
           {builderTabs.find((tab) => tab.key === selectedTab)?.label}
         </p>
@@ -1125,7 +1125,7 @@ export function ProductBuilderForm({
           {selectedTab === 'medias' && (
             <AnimatedSectionContent title="Médias" description="Image principale et ressources visuelles." >
               <div className="space-y-5">
-                <Card className="rounded-3xl border border-border p-6">
+                <Card className="rounded-3xl border-0 bg-transparent p-0 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
                       Image principale
@@ -1220,7 +1220,7 @@ export function ProductBuilderForm({
                 </div>
 
                 {/* Période de validité du prix promo */}
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Période de validité du prix de vente</p>
                   <p className="mt-1 text-xs">Créez l’urgence avec des offres limitées dans le temps</p>
                   <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1256,7 +1256,7 @@ export function ProductBuilderForm({
                 </div>
 
                 {/* Réduction automatique — relance panier abandonné */}
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <label className="flex items-center justify-between gap-3">
                     <span>
                       <span className="block font-semibold text-foreground">Réduction automatique ⚡️</span>
@@ -1299,7 +1299,7 @@ export function ProductBuilderForm({
                 </div>
 
                 {/* Tarifs alternatifs */}
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Ajoutez un tarif alternatif</p>
                   <p className="mt-1 text-xs">
                     Les variantes de prix vous permettent de créer plusieurs tarifs pour ce produit. Partagez un lien de paiement unique pour chaque tarif.
@@ -1423,7 +1423,7 @@ export function ProductBuilderForm({
                   </label>
                 </div>
 
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Visibilité publique</p>
                   <label className="flex items-center justify-between gap-3 mt-3 rounded-2xl border border-border bg-[var(--surface)] p-3">
                     <span>Afficher le stock sur la fiche produit</span>
@@ -1435,7 +1435,7 @@ export function ProductBuilderForm({
                   </label>
                 </div>
 
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Disponibilité universitaire</p>
                   <p className="mt-1 text-xs">Choisis qui peut voir et acheter ce produit. La règle sera revérifiée au paiement.</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -1470,7 +1470,7 @@ export function ProductBuilderForm({
                   <p className="mt-3 text-xs">« Mon université » compare l’université de l’acheteur à celle de ta boutique. « Autres universités » exige une université différente.</p>
                 </div>
 
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Variantes de produit</p>
                   <p className="mt-1 text-xs">Chaque variante peut modifier le prix et le stock disponibles au moment de l’achat.</p>
                   {variants.length === 0 && (
@@ -1534,7 +1534,7 @@ export function ProductBuilderForm({
                 </div>
 
                 {/* Exclusivité et visibilité */}
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Exclusivité et visibilité</p>
                   <div className="mt-3 space-y-1.5">
                     <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
@@ -1569,7 +1569,7 @@ export function ProductBuilderForm({
 
                 {/* Réapprovisionnement automatique */}
                 {stockMode === 'TRACKED' && (
-                  <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                  <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                     <p className="font-semibold text-foreground">Réapprovisionnement automatique</p>
                     <p className="mt-1 text-xs">Ajoutez de nouvelles places automatiquement quand le stock atteint un seuil</p>
                     <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1606,7 +1606,7 @@ export function ProductBuilderForm({
                 )}
 
                 {/* Post-achat & protection (surtout pertinent pour les produits numériques) */}
-                <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                   <p className="font-semibold text-foreground">Instructions après achat</p>
                   <p className="mt-1 text-xs">Guidez vos nouveaux clients pour maximiser leur satisfaction</p>
                   <textarea
@@ -1646,7 +1646,7 @@ export function ProductBuilderForm({
                 </div>
 
                 {productType === 'PHYSICAL' && (
-                  <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                  <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                     <p className="font-semibold text-foreground">Retrait sur place</p>
                     <label className="flex items-center justify-between gap-3 mt-3 rounded-2xl border border-border bg-[var(--surface)] p-3">
                       <span>Activer le retrait</span>
@@ -1682,7 +1682,7 @@ export function ProductBuilderForm({
                 )}
 
                 {productType === 'PHYSICAL' && (
-                  <div className="rounded-3xl border border-border bg-[var(--surface-2)] p-4 text-sm text-muted-foreground">
+                  <div className="rounded-3xl bg-transparent p-0 text-sm text-muted-foreground">
                     <p className="font-semibold text-foreground">Livraison</p>
                     <label className="flex items-center justify-between gap-3 mt-3 rounded-2xl border border-border bg-[var(--surface)] p-3">
                       <span>Activer la livraison</span>
@@ -1773,7 +1773,7 @@ export function ProductBuilderForm({
           {selectedTab === 'page-de-vente' && (
             <AnimatedSectionContent title="Page de vente" description="Rédige ta page commerciale en direct avec un hero et un contenu riche." >
               <div className="space-y-6">
-                <Card className="rounded-3xl border border-border p-6">
+                <Card className="rounded-3xl border-0 bg-transparent p-0 shadow-none">
                   <CardHeader className="pb-4">
                     <div>
                       <CardTitle className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -1846,7 +1846,7 @@ export function ProductBuilderForm({
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="rounded-3xl border border-border p-6">
+                <Card className="rounded-3xl border-0 bg-transparent p-0 shadow-none">
                   <CardHeader className="pb-4">
                     <div>
                       <CardTitle className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -1873,7 +1873,7 @@ export function ProductBuilderForm({
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="rounded-3xl border border-border bg-[var(--surface)] p-6">
+                    <div className="rounded-3xl bg-transparent p-0">
                       {pageHeroImageUrl ? (
                         <div className="relative h-72 overflow-hidden rounded-3xl mb-6">
                           <Image src={pageHeroImageUrl} alt={pageHeroHeadline || 'Couverture page de vente'} fill className="object-cover" />
@@ -1898,13 +1898,13 @@ export function ProductBuilderForm({
                         ) : null}
                       </div>
                     </div>
-                    <div className="rounded-3xl border border-border bg-[var(--surface)] p-6">
+                    <div className="rounded-3xl bg-transparent p-0">
                       <div className="prose max-w-full prose-sm prose-headings:text-base prose-a:text-primary prose-img:rounded-3xl prose-img:max-w-full">
                         <RichTextRenderer value={pageContent || ''} />
                       </div>
                     </div>
                     {(pickupAvailable || deliveryEnabled || deliveryZones.some((zone) => zone.name.trim())) ? (
-                      <div className="rounded-3xl border border-border bg-[var(--surface)] p-6">
+                      <div className="rounded-3xl bg-transparent p-0">
                         <p className="text-sm font-semibold text-foreground">Livraison et retrait</p>
                         <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                           {pickupAvailable ? <p>Retrait sur place{pickupLocation ? ` : ${pickupLocation}` : ''}</p> : null}
@@ -1984,7 +1984,7 @@ export function ProductBuilderForm({
                 {/* Aperçu façon résultat Google */}
                 <div>
                   <p className="text-xs font-medium mb-2" style={{ color: 'var(--muted-foreground)' }}>Aperçu</p>
-                  <div className="rounded-2xl border border-border bg-[var(--surface-2)] p-4">
+                  <div className="rounded-2xl bg-transparent p-0">
                     <p className="text-xs" style={{ color: '#4D7C0F' }}>
                       /{shopSlug ? `${shopSlug}/` : ''}{slug || 'mon-produit'}
                     </p>
@@ -2188,7 +2188,7 @@ export function ProductBuilderForm({
 
 function AnimatedSectionContent({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <Card className="rounded-3xl border border-border">
+    <Card className="rounded-3xl border-0 bg-transparent shadow-none">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
