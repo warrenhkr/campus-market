@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import {
   ShoppingBag, Search, Menu, X, User, LogOut,
   LayoutDashboard, Package, Heart, ShoppingCart,
-  ShieldCheck, CreditCard,
+  ShieldCheck, CreditCard, Store,
 } from 'lucide-react'
 import { NotificationBell } from './NotificationBell'
 import { Button } from '@/components/ui/button'
@@ -40,8 +40,16 @@ const menuByRole: Record<string, { href: string; label: string; icon: React.Elem
   SELLER: [
     { href: '/products',        label: 'Produits',     icon: Package },
     { href: '/account',         label: 'Mon compte',   icon: LayoutDashboard },
-    { href: '/seller',          label: 'Espace vendeur', icon: LayoutDashboard },
+    { href: '/seller',          label: 'Dashboard',    icon: LayoutDashboard },
     { href: '/seller/products', label: 'Mes produits', icon: Package },
+    { href: '/seller/orders',   label: 'Commandes',    icon: ShoppingCart },
+    { href: '/seller/customers', label: 'Clients',     icon: User },
+    { href: '/seller/earnings', label: 'Gains',        icon: CreditCard },
+    { href: '/seller/shop',     label: 'Ma boutique',  icon: ShoppingBag },
+    { href: '/seller/reviews',  label: 'Avis reçus',   icon: Heart },
+    { href: '/seller/subscription', label: 'Abonnement', icon: CreditCard },
+    { href: '/seller/settings', label: 'Paramètres',   icon: LayoutDashboard },
+    { href: '/seller/help',     label: 'Centre d’aide', icon: ShieldCheck },
   ],
   ADMIN: [
     { href: '/admin/reports',  label: 'Modération', icon: ShieldCheck },
@@ -51,12 +59,24 @@ const menuByRole: Record<string, { href: string; label: string; icon: React.Elem
   ],
 }
 
+const sellerPageItems = [
+  { href: '/seller', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/seller/products', label: 'Produits', icon: Package },
+  { href: '/seller/orders', label: 'Commandes', icon: ShoppingCart },
+  { href: '/seller/customers', label: 'Clients', icon: User },
+  { href: '/seller/earnings', label: 'Gains', icon: CreditCard },
+  { href: '/seller/shop', label: 'Ma boutique', icon: ShoppingBag },
+  { href: '/seller/reviews', label: 'Avis reçus', icon: Heart },
+  { href: '/seller/subscription', label: 'Abonnement', icon: CreditCard },
+  { href: '/seller/settings', label: 'Paramètres', icon: LayoutDashboard },
+  { href: '/seller/help', label: 'Centre d’aide', icon: ShieldCheck },
+]
+
 export function Navbar() {
   const pathname                    = usePathname()
   const router                      = useRouter()
   const [search, setSearch]         = useState('')
   const [profile, setProfile]       = useState<UserProfile | null>(null)
-  const [loading, setLoading]       = useState(true)
   const [scrolled, setScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -81,7 +101,6 @@ export function Navbar() {
       } else {
         setProfile(null)
       }
-      setLoading(false)
     }
 
     load()
@@ -98,7 +117,6 @@ export function Navbar() {
       } else {
         setProfile(null)
       }
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
@@ -118,6 +136,9 @@ export function Navbar() {
   }
 
   const menuItems = profile?.role ? (menuByRole[profile.role] ?? menuByRole.USER) : []
+  const mobileMenuItems = profile
+    ? [...menuItems.filter((item) => !item.href.startsWith('/seller')), ...sellerPageItems]
+    : []
 
   const initials = profile?.name
     ? profile.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -169,137 +190,155 @@ export function Navbar() {
 
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-1 ml-auto">
-            {!loading && (
-              profile ? (
-                <>
-                  {menuItems.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors',
-                        pathname === href
-                          ? 'bg-(--primary-dim) text-primary'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-(--surface-2)'
-                      )}
-                    >
-                      <Icon size={14} />
-                      {label}
-                    </Link>
-                  ))}
-
-                  <ThemeToggle />
-                  <NotificationBell/>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="ml-1 flex items-center gap-2 px-2 py-1.5 rounded-lg
-                        hover:bg-(--surface-2) transition-colors">
-                        <Avatar className="w-7 h-7">
-                          <AvatarFallback className="text-xs font-bold"
-                            style={{
-                              background: 'var(--primary-dim)',
-                              color: 'var(--primary)',
-                            }}>
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs max-w-25 truncate"
-                          style={{ color: 'var(--muted-foreground)' }}>
-                          {firstName}
-                        </span>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44"
-                      style={{
-                        background: 'var(--surface-2)',
-                        border: '1px solid var(--border)',
-                      }}>
-                      {/* Profile summary */}
-                      <div className="px-3 py-2">
-                        <p className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-                          {profile?.name ?? profile?.email}
-                        </p>
-                        {profile?.university ? (
-                          <p className="text-xs text-muted-foreground" style={{ marginTop: 2 }}>
-                            Université: {profile.university}
-                          </p>
-                        ) : null}
-                      </div>
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href="/account"
-                          className="cursor-pointer"
-                          style={{ color: 'var(--foreground)' }}
-                        >
-                          <LayoutDashboard size={14} className="mr-2" />
-                          Mon compte
-                        </Link>
-                      </DropdownMenuItem>
-                      {profile.role === 'SELLER' && (
-                        <DropdownMenuItem asChild>
-                          <Link
-                            href="/seller"
-                            className="cursor-pointer"
-                            style={{ color: 'var(--foreground)' }}
-                          >
-                            <LayoutDashboard size={14} className="mr-2" />
-                            Espace vendeur
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      {profile.role === 'ADMIN' && (
-                        <DropdownMenuItem asChild>
-                          <Link
-                            href="/admin/reports"
-                            className="cursor-pointer"
-                            style={{ color: 'var(--foreground)' }}
-                          >
-                            <ShieldCheck size={14} className="mr-2" />
-                            Modération admin
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator style={{ background: 'var(--border)' }} />
-                      <DropdownMenuItem
-                        onClick={handleLogout}
-                        className="cursor-pointer"
-                        style={{ color: 'var(--destructive)' }}
+            <Link
+              href="/products"
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors',
+                pathname.startsWith('/products')
+                  ? 'bg-(--primary-dim) text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-(--surface-2)'
+              )}
+            >
+              <Package size={14} />
+              Produits
+            </Link>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      'flex items-center px-2 py-2 rounded-lg text-sm transition-colors',
+                      pathname.startsWith('/seller')
+                        ? 'bg-(--primary-dim) text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-(--surface-2)'
+                    )}
+                    aria-label="Ouvrir les pages vendeur"
+                  >
+                    <Store size={14} />
+                    Pages vendeur
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52"
+                  style={{
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border)',
+                  }}>
+                  {sellerPageItems.map(({ href, label, icon: Icon }) => (
+                    <DropdownMenuItem key={href} asChild>
+                      <Link
+                        href={href}
+                        className={cn(
+                          'cursor-pointer',
+                          pathname === href ? 'bg-(--primary-dim) text-primary' : 'text-foreground'
+                        )}
                       >
-                        <LogOut size={14} className="mr-2" />
-                        Déconnexion
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              ) : (
-                <>
-                  <Link href="/products">
-                    <Button variant="ghost" size="sm"
-                      style={{ color: 'var(--muted-foreground)' }}>
-                      Produits
-                    </Button>
-                  </Link>
+                        <Icon size={14} className="mr-2" />
+                        {label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
 
-                  <ThemeToggle />
+            <ThemeToggle />
+            {profile && <NotificationBell />}
 
-                  <Link href="/login">
-                    <Button variant="ghost" size="sm"
-                      style={{ color: 'var(--muted-foreground)' }}>
-                      Connexion
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button size="sm" className="font-semibold"
+            {profile ? <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="ml-1 flex items-center gap-2 px-2 py-1.5 rounded-lg
+                  hover:bg-(--surface-2) transition-colors">
+                  <Avatar className="w-7 h-7">
+                    <AvatarFallback className="text-xs font-bold"
                       style={{
-                        background: 'var(--primary)',
-                        color: 'var(--primary-foreground)',
+                        background: 'var(--primary-dim)',
+                        color: 'var(--primary)',
                       }}>
-                      S&apos;inscrire
-                    </Button>
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs max-w-25 truncate"
+                    style={{ color: 'var(--muted-foreground)' }}>
+                    {firstName}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                }}>
+                {/* Profile summary */}
+                <div className="px-3 py-2">
+                  <p className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+                    {profile?.name ?? profile?.email}
+                  </p>
+                  {profile?.university ? (
+                    <p className="text-xs text-muted-foreground" style={{ marginTop: 2 }}>
+                      Université: {profile.university}
+                    </p>
+                  ) : null}
+                </div>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/account"
+                    className="cursor-pointer"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    <LayoutDashboard size={14} className="mr-2" />
+                    Mon compte
                   </Link>
-                </>
-              )
+                </DropdownMenuItem>
+                {profile.role === 'SELLER' && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/seller"
+                      className="cursor-pointer"
+                      style={{ color: 'var(--foreground)' }}
+                    >
+                      <LayoutDashboard size={14} className="mr-2" />
+                      Dashboard vendeur
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {profile.role === 'ADMIN' && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/admin/reports"
+                      className="cursor-pointer"
+                      style={{ color: 'var(--foreground)' }}
+                    >
+                      <ShieldCheck size={14} className="mr-2" />
+                      Modération admin
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator style={{ background: 'var(--border)' }} />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer"
+                  style={{ color: 'var(--destructive)' }}
+                >
+                  <LogOut size={14} className="mr-2" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu> : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm"
+                    style={{ color: 'var(--muted-foreground)' }}>
+                    Connexion
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button size="sm" className="font-semibold"
+                    style={{
+                      background: 'var(--primary)',
+                      color: 'var(--primary-foreground)',
+                    }}>
+                    S&apos;inscrire
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
 
@@ -309,7 +348,8 @@ export function Navbar() {
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon"
-                  style={{ color: 'var(--foreground)' }}>
+                  style={{ color: 'var(--foreground)' }}
+                  aria-label="Ouvrir le menu">
                   <Menu size={22} />
                 </Button>
               </SheetTrigger>
@@ -350,10 +390,12 @@ export function Navbar() {
                   </form>
 
                   <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-                    {!loading && (
-                      profile ? (
+                    {profile ? (
                         <>
-                          {menuItems.map(({ href, label, icon: Icon }) => (
+                          <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Pages vendeur
+                          </p>
+                          {mobileMenuItems.map(({ href, label, icon: Icon }) => (
                             <Link
                               key={href}
                               href={href}
@@ -385,6 +427,19 @@ export function Navbar() {
                             style={{ color: 'var(--muted-foreground)' }}>
                             <Package size={16} /> Produits
                           </Link>
+                          <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Pages vendeur
+                          </p>
+                          {sellerPageItems.map(({ href, label, icon: Icon }) => (
+                            <Link
+                              key={href}
+                              href={href}
+                              onClick={() => setMobileOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-muted-foreground transition-colors hover:bg-(--surface-2) hover:text-foreground"
+                            >
+                              <Icon size={16} /> {label}
+                            </Link>
+                          ))}
                           <Link href="/login" onClick={() => setMobileOpen(false)}
                             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm"
                             style={{ color: 'var(--muted-foreground)' }}>
@@ -399,8 +454,7 @@ export function Navbar() {
                             <User size={16} /> S&apos;inscrire
                           </Link>
                         </>
-                      )
-                    )}
+                      )}
                   </nav>
 
                   {profile && (

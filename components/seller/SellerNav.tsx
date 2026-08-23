@@ -21,9 +21,11 @@ const NAV = [
   { href: '/seller/help', label: 'Centre d’aide', icon: Headphones },
 ]
 
-// Sur mobile, quatre accès fréquents restent visibles; le reste est disponible
-// dans le panneau "Plus".
-const MOBILE_PRIMARY = ['/seller', '/seller/products', '/seller/orders', '/seller/shop']
+// Sur mobile, on garde les sections les plus utiles directement visibles et on
+// met le reste dans le panneau "Plus". 4 liens visibles + 1 bouton d'overflow
+// évite d'avoir un menu totalement caché tandis que les 10 sections restent
+// toujours accessibles.
+const MOBILE_PRIMARY = ['/seller', '/seller/products', '/seller/orders', '/seller/earnings']
 
 function isActiveHref(pathname: string, href: string) {
   return href === '/seller' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
@@ -46,7 +48,7 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
     <>
       {/* Desktop / tablette : sidebar verticale fixe — tous les liens visibles
           sans avoir à faire défiler, standard pour ce type d'espace de gestion. */}
-      <nav className="hidden md:sticky md:top-24 md:flex md:w-64 md:shrink-0 md:flex-col md:gap-1 md:pr-2 md:pt-3">
+      <nav className="hidden md:sticky md:top-24 md:flex md:w-56 md:shrink-0 md:flex-col md:gap-1 md:pr-2 md:pt-3">
         {shops.length > 1 && (
           <div className="mb-3">
             <ShopSwitcher shops={shops} activeShopId={activeShopId} />
@@ -59,10 +61,10 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
               key={href}
               href={href}
               className={cn(
-                'flex min-h-[44px] items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] font-medium leading-5 transition-colors duration-150',
+                'flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] font-medium leading-5 transition-colors duration-150',
                 isActive
                   ? 'bg-primary/15 text-primary'
-                  : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]'
+                  : 'text-muted-foreground hover:bg-(--surface-2) hover:text-foreground'
               )}
             >
               <Icon size={17} className="shrink-0" />
@@ -72,10 +74,9 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
         })}
       </nav>
 
-      {/* Mobile : bottom nav dédiée au vendeur (remplace visuellement la bottom
-          nav acheteur, hors-contexte ici) — 4 actions fréquentes + "Plus". */}
+      {/* Mobile : bottom nav dédiée au vendeur */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[80] flex h-20 items-center justify-around border-t border-white/10 bg-[#111111]/95 px-2 py-2 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-80 flex h-20 items-center justify-around border-t border-border bg-background/95 px-2 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md md:hidden"
       >
         {primaryItems.map(({ href, label, icon: Icon }) => {
           const isActive = isActiveHref(pathname, href)
@@ -89,12 +90,12 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
                 <motion.div
                   layoutId="sellerBottomNavIndicator"
                   className="absolute inset-0 rounded-xl"
-                  style={{ background: 'rgba(163, 230, 53, 0.1)' }}
+                  style={{ background: 'var(--primary-dim)' }}
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                 />
               )}
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" style={{ color: isActive ? '#A3E635' : '#9CA3AF' }} />
-              <span className="relative z-10 text-[10px] font-medium" style={{ color: isActive ? '#A3E635' : '#9CA3AF' }}>
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" style={{ color: isActive ? 'var(--primary)' : 'var(--muted-foreground)' }} />
+              <span className="relative z-10 text-[10px] font-medium" style={{ color: isActive ? 'var(--primary)' : 'var(--muted-foreground)' }}>
                 {label}
               </span>
             </Link>
@@ -110,12 +111,12 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
             <motion.div
               layoutId="sellerBottomNavIndicator"
               className="absolute inset-0 rounded-xl"
-              style={{ background: 'rgba(163, 230, 53, 0.1)' }}
+              style={{ background: 'var(--primary-dim)' }}
               transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
             />
           )}
-          <MoreHorizontal size={22} strokeWidth={isSecondaryActive ? 2.5 : 2} className="relative z-10" style={{ color: isSecondaryActive ? '#A3E635' : '#9CA3AF' }} />
-          <span className="relative z-10 text-[10px] font-medium" style={{ color: isSecondaryActive ? '#A3E635' : '#9CA3AF' }}>
+          <MoreHorizontal size={22} strokeWidth={isSecondaryActive ? 2.5 : 2} className="relative z-10" style={{ color: isSecondaryActive ? 'var(--primary)' : 'var(--muted-foreground)' }} />
+          <span className="relative z-10 text-[10px] font-medium" style={{ color: isSecondaryActive ? 'var(--primary)' : 'var(--muted-foreground)' }}>
             Plus
           </span>
         </button>
@@ -130,19 +131,19 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMoreOpen(false)}
-              className="fixed inset-0 z-[60] bg-black/50 md:hidden"
+              className="fixed inset-0 z-60 bg-black/50 md:hidden"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-20 z-[90] rounded-t-3xl p-4 pb-8 md:hidden"
-              style={{ background: 'var(--popover)', border: '1px solid var(--border)', borderBottom: 'none' }}
+              className="fixed inset-x-0 bottom-20 z-90 rounded-t-3xl bg-background p-4 pb-8 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] md:hidden dark:bg-[#111111]"
+              style={{ border: '1px solid var(--border)', borderBottom: 'none' }}
             >
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Plus d’options</p>
-                <button type="button" onClick={() => setMoreOpen(false)} className="text-[var(--muted-foreground)]">
+                <button type="button" onClick={() => setMoreOpen(false)} className="text-muted-foreground">
                   <X size={18} />
                 </button>
               </div>
@@ -157,7 +158,7 @@ export function SellerNav({ shops = [], activeShopId = '' }: SellerNavProps) {
                         onClick={() => setMoreOpen(false)}
                         className={cn(
                           'flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
-                          isActive ? 'bg-primary/15 text-primary' : 'bg-[var(--surface-2)] text-[var(--foreground)]'
+                          isActive ? 'bg-primary/15 text-primary' : 'bg-(--surface-2) text-foreground'
                         )}
                       >
                         <Icon size={17} />

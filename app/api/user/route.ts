@@ -18,10 +18,18 @@ export async function GET(_req: NextRequest) {
       avatar_url: true,
       role: true,
       created_at: true,
+      seller: { select: { id: true } },
     },
   })
 
-  return NextResponse.json({ profile })
+  if (!profile) return NextResponse.json({ profile: null })
+
+  return NextResponse.json({
+    profile: {
+      ...profile,
+      role: profile.role === 'USER' && profile.seller ? 'SELLER' : profile.role,
+    },
+  })
 }
 
 export async function PATCH(req: NextRequest) {

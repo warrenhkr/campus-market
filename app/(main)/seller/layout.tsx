@@ -23,17 +23,17 @@ export default async function SellerLayout({ children }: { children: React.React
 
   return (
     <>
-      <div className="flex w-full items-start gap-4 px-3 pt-4 sm:px-6 md:gap-6 md:pt-4 lg:gap-8 lg:px-8">
-        <div className="md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
-          <div className="pt-2">
+      <div className="flex w-full flex-col gap-4 px-3 pt-4 sm:px-5 md:flex-row md:items-start md:gap-6 md:px-6 lg:gap-8 lg:px-10">
+        <div className="w-full md:sticky md:top-0 md:block md:h-screen md:w-56 md:shrink-0 md:overflow-y-auto">
+          <div className="pt-1 md:pt-2">
             <SellerNav
               shops={shops.map((s) => ({ id: s.id, name: s.name, slug: s.slug, logo_url: s.logo_url }))}
               activeShopId={shop?.id ?? ''}
             />
           </div>
         </div>
-        <div className="min-w-0 flex-1 pb-28 md:pb-0">
-          <div className="mt-4 md:mt-0">
+        <div className="min-w-0 flex-1 pb-6 md:pb-0">
+          <div className="mt-0 md:mt-0">
             {children}
           </div>
         </div>

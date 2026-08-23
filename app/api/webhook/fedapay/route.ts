@@ -128,6 +128,7 @@ export async function POST(req: NextRequest) {
           where: { order_id: payment.order_id },
           select: {
             product_id: true,
+           variant_id: true,
             quantity: true,
             product: { select: { stock_mode: true } },
           },

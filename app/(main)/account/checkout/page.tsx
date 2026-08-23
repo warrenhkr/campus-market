@@ -22,6 +22,12 @@ interface CartItem {
   stock: number
   quantity: number
   type?: 'PHYSICAL' | 'DIGITAL'
+  pricing_tier_id?: string | null
+  pricing_tier_label?: string | null
+  abandoned_reminder_count?: number
+  auto_discount?: { enabled: boolean; type: 'FIXED' | 'PERCENT'; value: number } | null
+  variant_id?: string | null
+  variant_name?: string | null
 }
 
 interface ShippingZone {
@@ -62,8 +68,16 @@ export default function CheckoutPage() {
   useEffect(() => {
     setMounted(true)
     try {
-      const cart = JSON.parse(localStorage.getItem(CART_KEY) ?? '[]')
-      setItems(cart)
+      const cart = JSON.parse(localStorage.getItem(CART_KEY) ?? '[]') as CartItem[]
+      const reminderCounts = JSON.parse(localStorage.getItem('cm_cart_reminders') ?? '{}') as Record<string, number>
+      const nextCounts = { ...reminderCounts }
+      const trackedCart = cart.map((item) => {
+        const key = `${item.id}:${item.pricing_tier_id ?? 'standard'}`
+        nextCounts[key] = (nextCounts[key] ?? 0) + 1
+        return { ...item, abandoned_reminder_count: nextCounts[key] }
+      })
+      localStorage.setItem('cm_cart_reminders', JSON.stringify(nextCounts))
+      setItems(trackedCart)
     } catch {
       setItems([])
     }
@@ -111,7 +125,17 @@ export default function CheckoutPage() {
     loadShipping()
   }, [mounted, items])
 
-  const itemsTotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const itemsTotal = items.reduce((acc, item) => {
+    const discount = item.auto_discount
+    const count = item.abandoned_reminder_count ?? 0
+    const discountDue = discount?.enabled === true && count >= 3
+    const unitPrice = discountDue
+      ? discount.type === 'PERCENT'
+        ? Math.max(0, item.price * (1 - Math.min(100, discount.value) / 100))
+        : Math.max(0, item.price - discount.value)
+      : item.price
+    return acc + unitPrice * item.quantity
+  }, 0)
 
   const shippingTotal = useMemo(() => {
     return shippingOptions.reduce((sum, shop) => {
@@ -158,7 +182,13 @@ export default function CheckoutPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
+            items: items.map((item) => ({
+              id: item.id,
+              quantity: item.quantity,
+              pricing_tier_id: item.pricing_tier_id ?? null,
+              variant_id: item.variant_id ?? null,
+              abandoned_reminder_count: item.abandoned_reminder_count ?? 0,
+            })),
             phone,
             fullName,
             email,

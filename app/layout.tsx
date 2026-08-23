@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AppProviders } from '@/components/AppProviders'
 import './globals.css'
@@ -33,4 +33,9 @@ export default function RootLayout({
       </body>
     </html>
   )
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }

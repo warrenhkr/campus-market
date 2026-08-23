@@ -103,8 +103,8 @@ export function BottomNav() {
       <nav
         className="flex items-center justify-around h-16 rounded-2xl shadow-xl backdrop-blur-md"
         style={{
-          background: 'rgba(17, 17, 17, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.07)',
+          background: 'color-mix(in srgb, var(--surface) 95%, transparent)',
+          border: '1px solid var(--border)',
         }}
       >
         {navItems.map((item) => {
@@ -123,14 +123,14 @@ export function BottomNav() {
                 <motion.div
                   layoutId="bottomNavIndicator"
                   className="absolute inset-0 rounded-2xl"
-                  style={{ background: 'rgba(163, 230, 53, 0.1)' }}
+                  style={{ background: 'var(--primary-dim)' }}
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                 />
               )}
               
               <div className="relative z-10 flex items-center justify-center">
                 {item.name === 'Compte' && userProfile ? (
-                  <Avatar className={cn('w-6 h-6 border transition-colors', isActive ? 'border-[#A3E635]' : 'border-transparent')}>
+                  <Avatar className={cn('w-6 h-6 border transition-colors', isActive ? 'border-primary' : 'border-transparent')}>
                     {userProfile.avatarUrl ? (
                       <Image
                         src={userProfile.avatarUrl}
@@ -142,8 +142,8 @@ export function BottomNav() {
                     ) : (
                       <AvatarFallback className="text-[10px] font-bold"
                         style={{
-                          background: isActive ? '#A3E635' : 'var(--surface-2)',
-                          color: isActive ? '#000' : 'var(--muted-foreground)',
+                          background: isActive ? 'var(--primary)' : 'var(--surface-2)',
+                          color: isActive ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
                         }}>
                         {userProfile.initials}
                       </AvatarFallback>
@@ -154,7 +154,7 @@ export function BottomNav() {
                     size={24}
                     strokeWidth={isActive ? 2.5 : 2}
                     className="transition-colors"
-                    style={{ color: isActive ? '#A3E635' : '#888888' }}
+                    style={{ color: isActive ? 'var(--primary)' : 'var(--muted-foreground)' }}
                   />
                 )}
                 
@@ -163,8 +163,8 @@ export function BottomNav() {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1.5 -right-2 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold shadow-sm"
-                    style={{ background: '#A3E635', color: '#000' }}
+                    className="absolute -top-1.5 -right-2 flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-bold shadow-sm"
+                    style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
                   >
                     {item.badge > 99 ? '99+' : item.badge}
                   </motion.div>
@@ -173,7 +173,7 @@ export function BottomNav() {
               
               <span
                 className="text-[10px] font-medium z-10 transition-colors"
-                style={{ color: isActive ? '#A3E635' : '#888888' }}
+                style={{ color: isActive ? 'var(--primary)' : 'var(--muted-foreground)' }}
               >
                 {item.name}
               </span>
