@@ -57,6 +57,13 @@ enum PaymentStatus {
   @@map("payment_status")
 }
 
+enum CommissionEntryStatus {
+  AVAILABLE
+  REVERSED
+
+  @@map("commission_entry_status")
+}
+
 enum ProductStatus {
   PENDING_REVIEW
   APPROVED
@@ -255,6 +262,7 @@ model Shop {
   products                Product[]
   media                   StoreMedia[]
   payment_splits          PaymentSplit[]
+  commission_entries      CommissionEntry[]
 
   seller Seller @relation(fields: [seller_id], references: [id], onDelete: Cascade)
 
@@ -461,6 +469,7 @@ model Payment {
 
   order  Order          @relation(fields: [order_id], references: [id], onDelete: Cascade)
   splits PaymentSplit[]
+  commission_entries CommissionEntry[]
 
   @@map("payments")
 }
@@ -483,12 +492,31 @@ model PaymentSplit {
   @@map("payment_splits")
 }
 
+model CommissionEntry {
+  id               String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  payment_id       String                @db.Uuid
+  payment_split_id String                @unique @db.Uuid
+  shop_id          String                @db.Uuid
+  platform_fee     Decimal               @db.Decimal(10, 2)
+  seller_earning   Decimal               @db.Decimal(10, 2)
+  status           CommissionEntryStatus @default(AVAILABLE)
+  created_at       DateTime              @default(now()) @db.Timestamptz(6)
+
+  payment Payment @relation(fields: [payment_id], references: [id], onDelete: Cascade)
+  shop    Shop    @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+
+  @@index([payment_id])
+  @@index([shop_id, status])
+  @@map("commission_entries")
+}
+
 model Withdrawal {
   id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   seller_id   String   @db.Uuid
   amount      Decimal  @db.Decimal(10, 2)
   method      String   // ex: "MOMO", "BANK_TRANSFER"
   account     Json?    // détails du compte destinataire (numero, nom, banque, mobile operator...)
+  provider_id String?
   status      String   @default("PENDING")
   processed_at DateTime? @db.Timestamptz(6)
   created_at  DateTime @default(now()) @db.Timestamptz(6)

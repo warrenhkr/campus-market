@@ -17,7 +17,8 @@ async function getEarningsData(userId: string) {
   // Un paiement peut couvrir plusieurs boutiques à la fois (panier
   // multi-vendeurs) — payment_splits donne la part exacte de CE vendeur dans
   // chaque paiement, pas le total englobant les autres vendeurs de la même commande.
-  const splits = await prisma.paymentSplit.findMany({
+  const [splits, ledger] = await Promise.all([
+    prisma.paymentSplit.findMany({
     where: { shop_id: { in: shopIds } },
     include: {
       payment: {
@@ -40,17 +41,33 @@ async function getEarningsData(userId: string) {
       },
     },
     orderBy: { created_at: 'desc' },
-  })
+    }),
+    prisma.commissionEntry.findMany({
+      where: { shop_id: { in: shopIds } },
+      select: {
+        seller_earning: true,
+        status: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+    }),
+  ])
 
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const totalEarnings = splits
-    .filter(s => s.payment.status === 'CAPTURED')
-    .reduce((sum, s) => sum + Number(s.seller_earning), 0)
+  const availableEarnings = ledger
+    .filter(entry => entry.status === 'AVAILABLE')
+    .reduce((sum, entry) => sum + Number(entry.seller_earning), 0)
 
-  const monthEarnings = splits
-    .filter(s => s.payment.status === 'CAPTURED' && new Date(s.created_at) >= startOfMonth)
+  const totalEarnings = availableEarnings
+
+  const monthEarnings = ledger
+    .filter(entry => entry.status === 'AVAILABLE' && new Date(entry.created_at) >= startOfMonth)
+    .reduce((sum, entry) => sum + Number(entry.seller_earning), 0)
+
+  const pendingEarnings = splits
+    .filter(s => s.payment.status === 'PENDING' || s.payment.status === 'AUTHORIZED')
     .reduce((sum, s) => sum + Number(s.seller_earning), 0)
 
   // "payments" garde la forme attendue par le reste de la page (un paiement =
@@ -65,7 +82,7 @@ async function getEarningsData(userId: string) {
     order: s.payment.order,
   }))
 
-  return { payments, totalEarnings, monthEarnings }
+  return { payments, totalEarnings, monthEarnings, availableEarnings, pendingEarnings }
 }
 
 const PAYMENT_STATUS: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -86,7 +103,7 @@ export default async function SellerEarningsPage() {
   const data = await getEarningsData(user.id)
   if (!data) redirect('/become-seller')
 
-  const { payments, totalEarnings, monthEarnings } = data
+  const { payments, totalEarnings, monthEarnings, availableEarnings, pendingEarnings } = data
 
   const fmt = (n: number) => new Intl.NumberFormat('fr-FR').format(n)
 
@@ -106,11 +123,13 @@ export default async function SellerEarningsPage() {
       </AnimatedSection>
 
       <AnimatedSection delay={0.1}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         {[
           { label: 'Gains cumulés',         value: `${fmt(totalEarnings)} FCFA`,  icon: TrendingUp, color: '#10B981' },
           { label: 'Gains du mois en cours', value: `${fmt(monthEarnings)} FCFA`, icon: Calendar,  color: '#3B82F6' },
           { label: 'Transactions',           value: payments.length,              icon: Banknote,  color: '#A3E635' },
+          { label: 'Disponible au retrait', value: `${fmt(availableEarnings)} FCFA`, icon: CheckCircle, color: '#10B981' },
+          { label: 'En attente',             value: `${fmt(pendingEarnings)} FCFA`,   icon: Clock,       color: '#F59E0B' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="rounded-2xl p-5"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>

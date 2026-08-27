@@ -51,9 +51,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Vendeur introuvable.' }, { status: 403 })
     }
 
-    // La vérification KYC n'est plus bloquante pour les retraits. La police de
-    // contenu et la modération restent la vraie protection contre les usages
-    // abusifs ou interdits.
+    const previousWithdrawal = await prisma.withdrawal.findFirst({
+      where: { seller_id: seller.id },
+      select: { id: true },
+    })
+    if (!previousWithdrawal) {
+      const kycDocumentCount = await prisma.storeMedia.count({
+        where: { uploader_id: user.id, shop_id: null },
+      })
+      if (kycDocumentCount === 0) {
+        return NextResponse.json({
+          error: 'La vérification KYC est obligatoire avant votre premier retrait. Ajoutez vos documents d’identité.',
+          code: 'KYC_REQUIRED_FOR_FIRST_WITHDRAWAL',
+        }, { status: 403 })
+      }
+    }
+
+    const [available, reserved] = await Promise.all([
+      prisma.commissionEntry.aggregate({
+        where: { shop: { seller_id: seller.id }, status: 'AVAILABLE' },
+        _sum: { seller_earning: true },
+      }),
+      prisma.withdrawal.aggregate({
+        where: { seller_id: seller.id, status: { in: ['PENDING', 'APPROVED', 'PROCESSING'] } },
+        _sum: { amount: true },
+      }),
+    ])
+    const availableBalance = Number(available._sum.seller_earning ?? 0) - Number(reserved._sum.amount ?? 0)
+    if (amount > availableBalance) {
+      return NextResponse.json({
+        error: `Solde retirable insuffisant. Disponible : ${Math.max(0, availableBalance).toLocaleString('fr-FR')} FCFA.`,
+      }, { status: 400 })
+    }
+
     const withdrawal = await prisma.withdrawal.create({
       data: {
         seller_id: seller.id,

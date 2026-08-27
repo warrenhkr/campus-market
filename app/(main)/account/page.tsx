@@ -17,7 +17,7 @@ async function getUserData(userId: string) {
     const [user, orders, favorites] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, email: true, role: true, created_at: true },
+        select: { name: true, email: true, role: true, university: true, created_at: true },
       }),
       prisma.order.findMany({
         where: { user_id: userId },
@@ -104,6 +104,11 @@ export default async function AccountPage() {
           <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
             Bienvenue sur ton espace personnel Campus Market.
           </p>
+          {profile?.university && (
+            <p className="mt-2 text-xs font-medium" style={{ color: 'var(--primary)' }}>
+              Université : {profile.university}
+            </p>
+          )}
         </div>
       </AnimatedSection>
 

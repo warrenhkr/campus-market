@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import crypto from 'crypto'
+import { getFedaPayConfig } from '@/lib/fedapay'
 
 const VALID_SUBSCRIPTION_PLANS = ['STARTER', 'BUSINESS', 'PRO'] as const
 type SubscriptionPlan = (typeof VALID_SUBSCRIPTION_PLANS)[number]
@@ -12,7 +13,8 @@ export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text()
     const signature = req.headers.get('x-fedapay-signature')
-    const secret = process.env.FEDAPAY_WEBHOOK_SECRET
+    const fedapayConfig = await getFedaPayConfig()
+    const secret = fedapayConfig.webhookSecret
 
     if (!secret || !signature) {
       console.error('Missing secret or signature')
@@ -34,6 +36,29 @@ export async function POST(req: NextRequest) {
 
     const body = JSON.parse(rawBody)
     const { name, entity } = body
+
+    if (typeof name === 'string' && name.startsWith('payout.')) {
+      const providerId = entity?.id ? String(entity.id) : null
+      const metadata = entity?.custom_metadata || entity?.metadata || {}
+      const withdrawalId = typeof metadata.withdrawal_id === 'string' ? metadata.withdrawal_id : null
+      const providerStatus = String(entity?.status ?? '').toLowerCase()
+      const status = name === 'payout.sent' || providerStatus === 'sent'
+        ? 'PAID'
+        : name === 'payout.failed' || providerStatus === 'failed'
+          ? 'FAILED'
+          : 'PROCESSING'
+
+      if (providerId || withdrawalId) {
+        await prisma.withdrawal.updateMany({
+          where: {
+            status: 'PROCESSING',
+            ...(withdrawalId ? { id: withdrawalId } : { provider_id: providerId! }),
+          },
+          data: { status, processed_at: new Date() },
+        })
+      }
+      return NextResponse.json({ received: true }, { status: 200 })
+    }
 
     // On traite uniquement les événements liés aux transactions
     if (name === 'transaction.approved' || name === 'transaction.canceled' || name === 'transaction.failed') {
@@ -106,16 +131,12 @@ export async function POST(req: NextRequest) {
       }
 
       const payment = await prisma.payment.findUnique({
-        where: { transaction_id: transactionId }
+        where: { transaction_id: transactionId },
+        include: { splits: true },
       })
 
       if (!payment) {
         console.error(`Payment not found for FedaPay transaction: ${transactionId}`)
-        return NextResponse.json({ received: true }, { status: 200 })
-      }
-
-      // Idempotence: Ne jamais écraser un paiement déjà capturé
-      if (payment.status === 'CAPTURED') {
         return NextResponse.json({ received: true }, { status: 200 })
       }
 
@@ -124,50 +145,68 @@ export async function POST(req: NextRequest) {
         // produits suivis (stock_mode = TRACKED). Fait ici plutôt qu'au
         // moment du checkout : le stock ne doit bouger qu'une fois le
         // paiement réellement confirmé par FedaPay, jamais avant.
-        const orderItems = await prisma.orderItem.findMany({
-          where: { order_id: payment.order_id },
-          select: {
-            product_id: true,
-           variant_id: true,
-            quantity: true,
-            product: { select: { stock_mode: true } },
-          },
-        })
+        const captured = await prisma.$transaction(async (tx) => {
+          // Atomically claim the payment so concurrent approved webhooks can
+          // never decrement stock or create financial effects twice.
+          const claim = await tx.payment.updateMany({
+            where: { id: payment.id, status: { in: ['PENDING', 'AUTHORIZED'] } },
+            data: { status: 'CAPTURED', paid_at: new Date() },
+          })
+          if (claim.count === 0) return false
 
-        const stockUpdates = orderItems
-          .filter((item) => item.product.stock_mode === 'TRACKED')
-          .map((item) =>
-            // updateMany avec condition stock >= quantity : ne décrémente
-            // jamais sous 0, même en cas d'appels concurrents du webhook.
-            prisma.product.updateMany({
+          const orderItems = await tx.orderItem.findMany({
+            where: { order_id: payment.order_id },
+            select: {
+              product_id: true,
+              quantity: true,
+              product: { select: { stock_mode: true } },
+            },
+          })
+
+          await tx.order.update({
+            where: { id: payment.order_id },
+            data: { status: 'COMPLETED' },
+          })
+          await tx.commissionEntry.createMany({
+            data: payment.splits.map((split) => ({
+              payment_id: payment.id,
+              payment_split_id: split.id,
+              shop_id: split.shop_id,
+              platform_fee: split.platform_fee,
+              seller_earning: split.seller_earning,
+              status: 'AVAILABLE' as const,
+            })),
+            skipDuplicates: true,
+          })
+
+          for (const item of orderItems) {
+            if (item.product.stock_mode !== 'TRACKED') continue
+            // Never decrement below zero, even if another checkout raced us.
+            await tx.product.updateMany({
               where: { id: item.product_id, stock: { gte: item.quantity } },
               data: { stock: { decrement: item.quantity } },
             })
-          )
+          }
+          return true
+        })
 
-        await prisma.$transaction([
-          prisma.payment.update({
-            where: { id: payment.id },
-            data: { status: 'CAPTURED', paid_at: new Date() }
-          }),
-          prisma.order.update({
-            where: { id: payment.order_id },
-            data: { status: 'COMPLETED' }
-          }),
-          ...stockUpdates,
-        ])
+        if (!captured) {
+          return NextResponse.json({ received: true }, { status: 200 })
+        }
       } else {
         // transaction.canceled ou transaction.failed
-        await prisma.$transaction([
-          prisma.payment.update({
-            where: { id: payment.id },
-            data: { status: 'FAILED' }
-          }),
-          prisma.order.update({
-            where: { id: payment.order_id },
-            data: { status: 'CANCELLED' }
+        await prisma.$transaction(async (tx) => {
+          const claim = await tx.payment.updateMany({
+            where: { id: payment.id, status: { in: ['PENDING', 'AUTHORIZED'] } },
+            data: { status: 'FAILED' },
           })
-        ])
+          if (claim.count > 0) {
+            await tx.order.update({
+              where: { id: payment.order_id },
+              data: { status: 'CANCELLED' },
+            })
+          }
+        })
       }
     }
 
@@ -191,11 +230,12 @@ export async function GET(req: NextRequest) {
 
     if (id) {
       try {
-        const fedapayRes = await fetch(`https://sandbox-api.fedapay.com/v1/transactions/${encodeURIComponent(id)}`, {
+        const fedapayConfig = await getFedaPayConfig()
+        const fedapayRes = await fetch(`${fedapayConfig.apiUrl}/transactions/${encodeURIComponent(id)}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
+            'Authorization': `Bearer ${fedapayConfig.secretKey}`,
           },
         })
 

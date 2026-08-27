@@ -23,7 +23,7 @@ export default async function SellerLayout({ children }: { children: React.React
 
   return (
     <>
-      <div className="flex w-full flex-col gap-4 px-3 pt-4 sm:px-5 md:flex-row md:items-start md:gap-6 md:px-6 lg:gap-8 lg:px-10">
+      <div className="seller-shell flex w-full flex-col gap-4 px-3 pt-4 sm:px-5 md:flex-row md:items-start md:gap-6 md:px-6 lg:gap-8 lg:px-10">
         <div className="w-full md:sticky md:top-0 md:block md:h-screen md:w-56 md:shrink-0 md:overflow-y-auto">
           <div className="pt-1 md:pt-2">
             <SellerNav

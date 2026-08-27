@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { getFedaPayConfig } from '@/lib/fedapay'
 
 const VALID_SUBSCRIPTION_PLANS = ['STARTER', 'BUSINESS', 'PRO'] as const
 type SubscriptionPlan = (typeof VALID_SUBSCRIPTION_PLANS)[number]
@@ -44,11 +45,12 @@ export async function GET(req: NextRequest) {
 
     if (transactionId) {
       try {
-        const fedapayRes = await fetch(`https://sandbox-api.fedapay.com/v1/transactions/${encodeURIComponent(transactionId)}`, {
+        const fedapayConfig = await getFedaPayConfig()
+        const fedapayRes = await fetch(`${fedapayConfig.apiUrl}/transactions/${encodeURIComponent(transactionId)}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
+            Authorization: `Bearer ${fedapayConfig.secretKey}`,
           },
         })
 

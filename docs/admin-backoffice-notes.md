@@ -24,10 +24,9 @@ réconciliation le jour où les deux parties sont assemblées.
 - [ ] Lister/rechercher les utilisateurs (acheteurs et vendeurs)
 - [ ] Suspendre/réactiver un compte
 
-### Validation des boutiques étudiantes
-- [ ] File d'attente des boutiques en attente de validation
-      (`Seller.verification_status = PENDING` existe déjà côté schéma)
-- [ ] Approuver/rejeter une boutique avec motif
+### Ouverture des boutiques étudiantes
+- [x] Création immédiate d'une boutique sans validation manuelle
+- [x] La modération admin porte sur les produits, boutiques suspendues et signalements
 
 ### Surveillance des transactions
 - [ ] Vue d'ensemble des commandes/paiements (`Order`, `Payment`, et le
@@ -36,10 +35,9 @@ réconciliation le jour où les deux parties sont assemblées.
 
 ### Modération des contenus et produits publiés
 - [ ] File de modération des produits (`Product.status = PENDING_REVIEW`
-      existe déjà côté schéma — actuellement les produits sont créés en
-      `PENDING_REVIEW` dans `app/api/seller/products/route.ts`, mais rien
-      dans le code actuel ne les fait passer à `APPROVED`/`REJECTED` — à
-      vérifier si l'espace admin gère bien cette transition)
+      existe déjà côté schéma; la création vendeur actuelle publie directement
+      le produit en `APPROVED`, tandis que l'admin peut ensuite le masquer ou
+      le supprimer via sa modération)
 - [ ] Gestion des signalements (modèle `Report` déjà présent dans le schéma)
 
 ### Analytics
@@ -59,8 +57,9 @@ réconciliation le jour où les deux parties sont assemblées.
    l'admin appelle une route qui existe déjà, ou en prévoir une
    (`PATCH /api/admin/products/[id]` par ex.) si l'admin doit rester dans
    ce même dépôt/API.
-3. **`Seller.verification_status`** : même remarque — confirmer le point
-   d'entrée utilisé pour faire passer `PENDING → APPROVED/REJECTED`.
+3. **`Seller.verification_status`** : ce statut reste disponible pour le KYC
+   facultatif; il ne constitue pas une barrière à la création de boutique ou
+   à la demande de retrait.
 4. **`Report`** : vérifier que le modèle actuel (motifs, statut) couvre
    bien ce dont l'admin a besoin pour la modération.
 
