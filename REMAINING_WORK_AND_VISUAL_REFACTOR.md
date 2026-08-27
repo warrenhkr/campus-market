@@ -7,7 +7,7 @@ Mise a jour: 2026-08-27
 Ce document liste précisément les tâches restantes que tu as signalées (affichage de l'université, correction des selects, refonte visuelle finale), propose un plan d'action priorisé, indique les fichiers et composants à modifier, propose des tests associés et décrit comment préparer les commits/pushs des deux côtés.
 
 1) Résumé rapide des points signalés
-- L'information "université" est récupérée (stockée sur l'utilisateur) mais n'est affichée nulle part dans l'interface.
+- L'information "université" est récupérée et affichée dans la navbar, le compte, la fiche produit et le dashboard vendeur.
 - Les composants <Select> sont mal stylés : quand ils sont actifs (focus / open) ils deviennent transparents et le contraste est mauvais.
 - Il faut prévoir une refonte visuelle finale (polish global, cohérence mobile/desktop, palette, typographie, boutons, formulaires, états d'erreur).
 
@@ -157,7 +157,7 @@ Tu as mentionné "on push des deux côtés" — j'entends par là :
 
 9) Prochaine action que je peux faire maintenant
 - [x] Corriger le style des Selects sur le front et l'admin
-- [ ] Afficher l'université sur Navbar, fiche produit et page vendeur
+- [x] Afficher l'université sur Navbar, compte, fiche produit et page vendeur
 - [ ] Lancer les tests navigateur et la checklist FedaPay
 
 Etat des selects au 2026-08-27 : les composants Radix et les selects HTML natifs du front et de l'admin utilisent un fond opaque, un focus visible et un état ouvert lisible. Les tests visuels navigateur restent à effectuer.
