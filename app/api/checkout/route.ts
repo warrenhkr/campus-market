@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getCommissionRate } from '@/lib/subscription-plans'
+import { getFedaPayConfig, getFedaPayTransactionPayUrl } from '@/lib/fedapay'
 
 interface CartItemInput {
   id: string
@@ -186,11 +187,12 @@ export async function POST(req: NextRequest) {
     })
 
     // 2. Appel FedaPay
-    const fedapayRes = await fetch('https://sandbox-api.fedapay.com/v1/transactions', {
+    const fedapayConfig = await getFedaPayConfig()
+    const fedapayRes = await fetch(`${fedapayConfig.apiUrl}/transactions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
+        'Authorization': `Bearer ${fedapayConfig.secretKey}`,
       },
       body: JSON.stringify({
         description: `Commande Campus Market #${order.id.slice(0, 8).toUpperCase()}`,
@@ -214,6 +216,10 @@ export async function POST(req: NextRequest) {
 
     if (!fedapayRes.ok) {
       console.error('FedaPay error response:', fedapayData)
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'CANCELLED' },
+      })
       return NextResponse.json({ success: false, error: fedapayData.message ?? 'Erreur FedaPay' }, { status: 200 })
     }
 
@@ -259,10 +265,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (transactionId) {
-      return NextResponse.json({ success: true, order_id: order.id, payment_url: `https://sandbox-api.fedapay.com/v1/transactions/${transactionId}/pay` })
+      return NextResponse.json({ success: true, order_id: order.id, payment_url: getFedaPayTransactionPayUrl(String(transactionId), fedapayConfig.apiUrl) })
     }
 
     console.error('FedaPay returned no transaction id (checkout):', fedapayData)
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'CANCELLED' },
+    })
     return NextResponse.json({ success: false, error: 'FedaPay returned no transaction id' }, { status: 200 })
   } catch (err) {
     console.error('Checkout error:', err)

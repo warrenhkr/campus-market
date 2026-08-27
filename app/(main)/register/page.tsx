@@ -216,7 +216,7 @@ export default function RegisterPage() {
                   required
                   value={selectedUniversity}
                   onValueChange={(value) => setSelectedUniversity(value)}>
-                  <SelectTrigger className="w-full h-11 bg-transparent border-border rounded-md text-sm transition-all shadow-none">
+                  <SelectTrigger className="w-full h-11 border-border rounded-md text-sm transition-all shadow-none">
                     <SelectValue placeholder="Sélectionne ton université" />
                   </SelectTrigger>
                   <SelectContent>
@@ -238,7 +238,7 @@ export default function RegisterPage() {
                   Filière / École
                 </label>
                 <Select name="filiere" required>
-                  <SelectTrigger className="w-full h-11 bg-transparent border-border rounded-md text-sm transition-all shadow-none">
+                  <SelectTrigger className="w-full h-11 border-border rounded-md text-sm transition-all shadow-none">
                     <SelectValue placeholder="Sélectionne ta filière" />
                   </SelectTrigger>
                   <SelectContent>

@@ -115,13 +115,13 @@ Important : ne pas se reposer uniquement sur la réponse du PSP ; valider côté
 
 - POST /api/seller/withdrawals
   - Créer une demande de retrait du solde vendeur (montant, méthode de retrait: compte mobile/banque).
-  - Vérifier que le vendeur est vérifié (KYC) avant d'autoriser la demande.
+  - Le KYC est obligatoire avant la première demande; ensuite le solde disponible et la validation admin restent obligatoires.
 
 - PATCH /api/seller/withdrawals/:id/approve (admin)
   - Endpoint pour le staff/admin pour valider/payer une demande de retrait et consigner le statut.
 
 - POST /api/seller/verification
-  - Endpoint pour que le vendeur soumette ses pièces d'identité (photo ID, selfie) et données pour vérification KYC (obligatoire avant premier retrait).
+  - Endpoint pour que le vendeur soumette ses pièces d'identité (photo ID, selfie) et données pour vérification KYC obligatoire avant le premier retrait.
 
 - POST /api/reports/shop
   - Permet à un utilisateur connecté de signaler une boutique : { shopId, reason, details, reporterId }.
@@ -207,10 +207,10 @@ Avant de commencer le dev, vérifier et préparer :
   - Les demandes de retrait doivent être historisées (montant, méthode, frais, statut, timestamps).
 
 - Vérification d'identité (KYC)
-  - Avant le premier retrait, le vendeur doit fournir une pièce d'identité valide (photo recto/verso si applicable) et un selfie pour vérification.
+  - Le vendeur doit fournir une pièce d'identité valide (photo recto/verso si applicable) et un selfie avant son premier retrait.
   - Endpoint /api/seller/verification pour soumettre des documents et les métadonnées (nom complet, date de naissance, pays, pièce fournie).
   - Processus de modération/validation : automatisé si possible (OCR / fournisseurs KYC) ou via revue manuelle par l'équipe.
-  - Tant que le vendeur n'est pas vérifié, masquer l'option de retrait (ou indiquer "retiré non autorisé — vérification requise").
+  - Tant que le vendeur n'a pas soumis de document KYC, bloquer le premier retrait avec un message explicite; les retraits suivants restent soumis au solde, au risque et à la validation admin.
 
 - Règles supplémentaires
   - Plafonds de retrait minimum/maximum, délai de traitement estimé et frais appliqués.

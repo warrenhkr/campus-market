@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { getFedaPayConfig, getFedaPayTransactionPayUrl } from '@/lib/fedapay'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -24,11 +25,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Vendeur introuvable.' }, { status: 404 })
     }
 
-    const fedapayRes = await fetch('https://sandbox-api.fedapay.com/v1/transactions', {
+    const fedapayConfig = await getFedaPayConfig()
+    const fedapayRes = await fetch(`${fedapayConfig.apiUrl}/transactions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
+        'Authorization': `Bearer ${fedapayConfig.secretKey}`,
       },
       body: JSON.stringify({
         description: `Abonnement ${plan} - Campus Market`,
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (transactionId) {
-      return NextResponse.json({ success: true, payment_url: `https://sandbox-api.fedapay.com/v1/transactions/${transactionId}/pay` })
+      return NextResponse.json({ success: true, payment_url: getFedaPayTransactionPayUrl(String(transactionId), fedapayConfig.apiUrl) })
     }
 
     console.error('FedaPay returned no transaction id nor payment_url:', fedapayData)

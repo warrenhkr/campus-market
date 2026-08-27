@@ -11,7 +11,7 @@ type Withdrawal = {
   id: string
   amount: number
   method: string
-  account: any
+  account: Record<string, unknown> | null
   status: string
   created_at: string
 }
@@ -85,7 +85,7 @@ export default function SellerWithdrawals() {
           Retraits
         </p>
         <h2 className="text-2xl font-bold text-foreground">Gérer vos retraits</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Demande de retrait vers Moov ou MTN Mobile Money.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Demande de retrait vers Moov ou MTN Mobile Money. Le KYC est obligatoire avant le premier retrait.</p>
       </div>
 
       <Card className="rounded-3xl border border-border mb-6">

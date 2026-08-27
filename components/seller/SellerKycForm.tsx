@@ -17,6 +17,11 @@ type DocMeta = {
   type?: string
 }
 
+type VerificationDocumentResponse = {
+  url?: unknown
+  type?: unknown
+}
+
 export default function SellerKycForm() {
   const [status, setStatus] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocMeta[]>([])
@@ -34,8 +39,11 @@ export default function SellerKycForm() {
           return
         }
         setStatus(json.verificationStatus ?? null)
-        const docs = Array.isArray(json.documents) ? json.documents : []
-        setDocuments(docs.map((d: any) => ({ url: d.url, type: d.type })))
+        const docs: unknown[] = Array.isArray(json.documents) ? json.documents : []
+        setDocuments(docs
+          .filter((d: unknown): d is VerificationDocumentResponse => !!d && typeof d === 'object')
+          .filter((d: VerificationDocumentResponse) => typeof d.url === 'string')
+          .map((d: VerificationDocumentResponse) => ({ url: d.url as string, type: typeof d.type === 'string' ? d.type : undefined })))
       })
       .catch((err) => console.error('KYC fetch failed', err))
     return () => { mounted = false }
@@ -96,10 +104,10 @@ export default function SellerKycForm() {
     <div className="w-full px-4 pb-8 sm:px-6 lg:px-8">
       <div className="mb-6">
         <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-sm text-muted-foreground">
-          Vérification facultative
+          Vérification requise pour le premier retrait
         </p>
-        <h2 className="text-2xl font-bold text-foreground">Vérifier votre identité (optionnel)</h2>
-        <p className="mt-1 text-sm text-muted-foreground">La vérification n’est plus obligatoire pour activer le compte ou demander un retrait. Cela reste facultatif pour renforcer la confiance, sans bloquer l’accès.</p>
+        <h2 className="text-2xl font-bold text-foreground">Vérifier votre identité</h2>
+        <p className="mt-1 text-sm text-muted-foreground">La vérification n’est pas nécessaire pour créer une boutique ou vendre. Elle est obligatoire avant votre premier retrait.</p>
       </div>
 
       <Card className="rounded-3xl border border-border">

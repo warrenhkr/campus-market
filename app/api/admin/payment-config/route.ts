@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 
-function getCurrentPaymentMode() {
+async function getCurrentPaymentMode() {
   const envMode = (process.env.FEDAPAY_ENV || 'sandbox').toLowerCase()
-  if (envMode === 'production' || envMode === 'live') return 'live'
-  return 'sandbox'
+  const fallback = envMode === 'production' || envMode === 'live' ? 'live' : 'sandbox'
+  const setting = await prisma.setting.findUnique({ where: { key: 'fedapay_mode' } })
+  return setting?.value === 'live' || setting?.value === 'sandbox' ? setting.value : fallback
 }
 
 function getLiveKeyStatus() {
@@ -47,7 +48,7 @@ export async function GET() {
   try {
     await requireAdminSession()
 
-    const mode = getCurrentPaymentMode()
+    const mode = await getCurrentPaymentMode()
     const liveKeys = getLiveKeyStatus()
 
     return NextResponse.json({
@@ -84,9 +85,17 @@ export async function PATCH(req: NextRequest) {
     const liveKeys = getLiveKeyStatus()
     const canEnableLive = requestedMode === 'sandbox' || liveKeys.configured
 
+    if (canEnableLive) {
+      await prisma.setting.upsert({
+        where: { key: 'fedapay_mode' },
+        update: { value: requestedMode, description: 'Mode FedaPay actif', category: 'payments' },
+        create: { key: 'fedapay_mode', value: requestedMode, description: 'Mode FedaPay actif', category: 'payments' },
+      })
+    }
+
     return NextResponse.json({
       success: true,
-      dryRun: true,
+      dryRun: false,
       requestedMode,
       liveEnabled: canEnableLive && requestedMode === 'live',
       liveKeysConfigured: liveKeys.configured,
