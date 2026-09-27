@@ -72,6 +72,20 @@ Le dépôt contient la marketplace étudiante Campus Market ainsi que les routes
 - Mise à jour des statuts commande et paiement
 - Gestion des abonnements vendeur
 
+#### Préparation FedaPay live
+
+- Le checkout serveur (`POST /api/checkout`) lit le mode via `getFedaPayConfig()` : la valeur `fedapay_mode` en base prime sur `FEDAPAY_ENV`; sans réglage en base, le mode par défaut est `sandbox`.
+- Les bases API utilisées sont `https://sandbox-api.fedapay.com/v1` et `https://api.fedapay.com/v1`. Le checkout utilise une clé secrète serveur, pas le widget public FedaPay.
+- Le panneau admin `/admin/payments` enregistre le mode dans `settings.fedapay_mode`. Il ne stocke aucune clé.
+- Pour rendre le live activable dans l'application principale, configurer dans les secrets de déploiement `FEDAPAY_LIVE_SECRET_KEY`, `FEDAPAY_LIVE_WEBHOOK_SECRET` et une URL publique HTTPS dans `NEXT_PUBLIC_APP_URL` ou `APP_URL`. Le panneau bloque l'activation si un de ces éléments manque. `FEDAPAY_LIVE_PUBLIC_KEY` n'est pas consommée par l'intégration serveur actuelle.
+- Le webhook à enregistrer dans le compte FedaPay live est `https://<domaine-public>/api/webhook/fedapay`. Utiliser le secret propre à ce webhook live comme `FEDAPAY_LIVE_WEBHOOK_SECRET`; il est distinct de la clé API et du secret webhook sandbox.
+- La signature du webhook suit le SDK Node officiel FedaPay : HMAC-SHA256 de `timestamp.corps_brut`, schéma `s`, tolérance de 300 secondes. Une erreur interne répond maintenant en HTTP 500 afin que FedaPay puisse réessayer.
+- L'application admin séparée envoie aussi les payouts FedaPay. Pour ses opérations live, définir `FEDAPAY_ENV=live` et `FEDAPAY_LIVE_SECRET_KEY` dans son propre environnement de déploiement. Elle n'utilise plus la clé sandbox comme solution de repli en mode live.
+
+**État des tests au 2026-09-27 :** le propriétaire indique avoir testé avec succès le parcours sandbox. Le typecheck du dépôt principal passe après les changements de préparation live. Aucun paiement réel n'a été lancé dans ce travail : le live ne sera validé qu'après ajout des secrets, configuration du webhook live et vérification d'une transaction réelle et de son événement reçu.
+
+Références officielles : [authentification FedaPay](https://docs.fedapay.com/fr/integration-api/authentication.md), [envoi des requêtes et environnements](https://docs.fedapay.com/fr/integration-api/sending-requests.md), [webhooks](https://docs.fedapay.com/fr/integration-api/webhooks.md), [SDK Node FedaPay](https://github.com/fedapay/fedapay-node).
+
 ## 5. Points de vigilance à retenir
 
 - Le dépôt est la source de vérité ; les anciens fichiers de passation ne doivent pas être considérés comme statut courant.

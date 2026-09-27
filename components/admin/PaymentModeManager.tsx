@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export function PaymentModeManager() {
   const [mode, setMode] = useState<'sandbox' | 'live'>('sandbox')
-  const [liveKeysConfigured, setLiveKeysConfigured] = useState(false)
-  const [missingKeys, setMissingKeys] = useState<string[]>([])
+  const [liveConfigurationReady, setLiveConfigurationReady] = useState(false)
+  const [missingConfiguration, setMissingConfiguration] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState('Chargement de la configuration…')
   const [busy, setBusy] = useState(false)
@@ -24,8 +24,8 @@ export function PaymentModeManager() {
         }
 
         setMode(json.mode === 'live' ? 'live' : 'sandbox')
-        setLiveKeysConfigured(Boolean(json.liveKeysConfigured))
-        setMissingKeys(Array.isArray(json.missingKeys) ? json.missingKeys : [])
+        setLiveConfigurationReady(Boolean(json.liveConfigurationReady))
+        setMissingConfiguration(Array.isArray(json.missingConfiguration) ? json.missingConfiguration : [])
         setNote(json.note ?? 'Configuration chargée.')
       } catch (error) {
         console.error('Failed to load payment config', error)
@@ -55,8 +55,8 @@ export function PaymentModeManager() {
 
       const isLive = json.requestedMode === 'live' && Boolean(json.liveEnabled)
       setMode(isLive ? 'live' : 'sandbox')
-      setLiveKeysConfigured(Boolean(json.liveKeysConfigured))
-      setMissingKeys(Array.isArray(json.missingKeys) ? json.missingKeys : [])
+      setLiveConfigurationReady(Boolean(json.liveConfigurationReady))
+      setMissingConfiguration(Array.isArray(json.missingConfiguration) ? json.missingConfiguration : [])
       setNote(json.message ?? 'Configuration enregistrée.')
     } catch (error) {
       console.error('Failed to switch payment mode', error)
@@ -86,11 +86,11 @@ export function PaymentModeManager() {
           {note}
         </div>
 
-        {!liveKeysConfigured && missingKeys.length > 0 && (
+        {!liveConfigurationReady && missingConfiguration.length > 0 && (
           <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-            <p className="font-medium">Clés live manquantes :</p>
+            <p className="font-medium">Configuration live manquante :</p>
             <ul className="mt-2 list-disc pl-5">
-              {missingKeys.map((key) => <li key={key}>{key}</li>)}
+              {missingConfiguration.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </div>
         )}
@@ -99,7 +99,7 @@ export function PaymentModeManager() {
           <Button
             type="button"
             onClick={handleToggleLive}
-            disabled={busy || loading || mode === 'live' || !liveKeysConfigured}
+            disabled={busy || loading || mode === 'live' || !liveConfigurationReady}
           >
             {busy ? 'Activation…' : mode === 'live' ? 'Mode live actif' : 'Activer le mode live'}
           </Button>

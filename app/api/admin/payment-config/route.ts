@@ -1,27 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { getFedaPayLiveMissingConfiguration } from '@/lib/fedapay'
 
 async function getCurrentPaymentMode() {
   const envMode = (process.env.FEDAPAY_ENV || 'sandbox').toLowerCase()
   const fallback = envMode === 'production' || envMode === 'live' ? 'live' : 'sandbox'
   const setting = await prisma.setting.findUnique({ where: { key: 'fedapay_mode' } })
   return setting?.value === 'live' || setting?.value === 'sandbox' ? setting.value : fallback
-}
-
-function getLiveKeyStatus() {
-  const requiredKeys = [
-    'FEDAPAY_LIVE_PUBLIC_KEY',
-    'FEDAPAY_LIVE_SECRET_KEY',
-    'FEDAPAY_LIVE_WEBHOOK_SECRET',
-  ] as const
-
-  const missing = requiredKeys.filter((key) => !process.env[key])
-
-  return {
-    configured: missing.length === 0,
-    missing,
-  }
 }
 
 async function requireAdminSession() {
@@ -49,15 +35,15 @@ export async function GET() {
     await requireAdminSession()
 
     const mode = await getCurrentPaymentMode()
-    const liveKeys = getLiveKeyStatus()
+    const missingConfiguration = getFedaPayLiveMissingConfiguration()
 
     return NextResponse.json({
       success: true,
       provider: 'FedaPay',
       mode,
-      liveEnabled: mode === 'live' || process.env.FEDAPAY_LIVE_ENABLED === 'true',
-      liveKeysConfigured: liveKeys.configured,
-      missingKeys: liveKeys.missing,
+      liveEnabled: mode === 'live' && missingConfiguration.length === 0,
+      liveConfigurationReady: missingConfiguration.length === 0,
+      missingConfiguration,
       note: 'Le mode live reste désactivé tant que la validation admin de production n’a pas été faite.',
     })
   } catch (error) {
@@ -82,8 +68,8 @@ export async function PATCH(req: NextRequest) {
     const rawMode = typeof body?.mode === 'string' ? body.mode.toLowerCase() : 'sandbox'
     const requestedMode = rawMode === 'live' ? 'live' : 'sandbox'
 
-    const liveKeys = getLiveKeyStatus()
-    const canEnableLive = requestedMode === 'sandbox' || liveKeys.configured
+    const missingConfiguration = getFedaPayLiveMissingConfiguration()
+    const canEnableLive = requestedMode === 'sandbox' || missingConfiguration.length === 0
 
     if (canEnableLive) {
       await prisma.setting.upsert({
@@ -98,11 +84,11 @@ export async function PATCH(req: NextRequest) {
       dryRun: false,
       requestedMode,
       liveEnabled: canEnableLive && requestedMode === 'live',
-      liveKeysConfigured: liveKeys.configured,
-      missingKeys: liveKeys.missing,
+      liveConfigurationReady: missingConfiguration.length === 0,
+      missingConfiguration,
       message: canEnableLive
         ? 'Configuration validée pour la bascule live. La mise en production doit toujours être vérifiée avant activation complète.'
-        : 'Les clés live sont manquantes. Le paiement reste en mode sandbox pour sécuriser la plateforme.',
+        : 'La configuration live est incomplète. Le paiement reste en mode sandbox pour sécuriser la plateforme.',
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHENTICATED') {

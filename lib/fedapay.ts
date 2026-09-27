@@ -5,6 +5,24 @@ const FEDAPAY_LIVE_API_URL = 'https://api.fedapay.com/v1'
 
 type FedaPayMode = 'sandbox' | 'live'
 
+export function getFedaPayLiveMissingConfiguration() {
+  const missing = [
+    ...(!process.env.FEDAPAY_LIVE_SECRET_KEY ? ['FEDAPAY_LIVE_SECRET_KEY'] : []),
+    ...(!process.env.FEDAPAY_LIVE_WEBHOOK_SECRET ? ['FEDAPAY_LIVE_WEBHOOK_SECRET'] : []),
+  ]
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL
+
+  try {
+    if (!appUrl || new URL(appUrl).protocol !== 'https:') {
+      missing.push('NEXT_PUBLIC_APP_URL (or APP_URL, HTTPS)')
+    }
+  } catch {
+    missing.push('NEXT_PUBLIC_APP_URL (or APP_URL, HTTPS)')
+  }
+
+  return missing
+}
+
 function getEnvMode(): FedaPayMode {
   const configuredMode = (process.env.FEDAPAY_ENV ?? 'sandbox').toLowerCase()
   return configuredMode === 'live' || configuredMode === 'production' ? 'live' : 'sandbox'
@@ -23,10 +41,10 @@ export async function getFedaPayConfig() {
     mode,
     apiUrl: mode === 'live' ? FEDAPAY_LIVE_API_URL : FEDAPAY_SANDBOX_API_URL,
     secretKey: mode === 'live'
-      ? process.env.FEDAPAY_LIVE_SECRET_KEY ?? process.env.FEDAPAY_SECRET_KEY
+      ? process.env.FEDAPAY_LIVE_SECRET_KEY
       : process.env.FEDAPAY_SECRET_KEY,
     webhookSecret: mode === 'live'
-      ? process.env.FEDAPAY_LIVE_WEBHOOK_SECRET ?? process.env.FEDAPAY_WEBHOOK_SECRET
+      ? process.env.FEDAPAY_LIVE_WEBHOOK_SECRET
       : process.env.FEDAPAY_WEBHOOK_SECRET,
   }
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getCommissionRate } from '@/lib/subscription-plans'
-import { getFedaPayConfig, getFedaPayTransactionPayUrl } from '@/lib/fedapay'
+import { getFedaPayConfig, getFedaPayLiveMissingConfiguration, getFedaPayTransactionPayUrl } from '@/lib/fedapay'
 
 interface CartItemInput {
   id: string
@@ -165,6 +165,16 @@ export async function POST(req: NextRequest) {
       // mode 'pickup' ou zone sans frais : shippingFee reste à 0 (gratuit)
     }
 
+    const fedapayConfig = await getFedaPayConfig()
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'
+    if (
+      !fedapayConfig.secretKey
+      || (fedapayConfig.mode === 'live' && getFedaPayLiveMissingConfiguration().length > 0)
+    ) {
+      return NextResponse.json({ success: false, error: 'Configuration FedaPay incomplète.' }, { status: 503 })
+    }
+    const callbackUrl = new URL('/api/webhook/fedapay', appUrl).toString()
+
     // 1. Crée la commande avec les prix vérifiés côté serveur (jamais ceux du client)
     const order = await prisma.order.create({
       data: {
@@ -187,7 +197,6 @@ export async function POST(req: NextRequest) {
     })
 
     // 2. Appel FedaPay
-    const fedapayConfig = await getFedaPayConfig()
     const fedapayRes = await fetch(`${fedapayConfig.apiUrl}/transactions`, {
       method: 'POST',
       headers: {
@@ -198,7 +207,7 @@ export async function POST(req: NextRequest) {
         description: `Commande Campus Market #${order.id.slice(0, 8).toUpperCase()}`,
         amount: total,
         currency: { iso: 'XOF' },
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000'}/api/webhook/fedapay`,
+        callback_url: callbackUrl,
         customer: {
           firstname: fullName.split(' ')[0],
           lastname: fullName.split(' ').slice(1).join(' ') || fullName,

@@ -9,6 +9,30 @@ type SubscriptionPlan = (typeof VALID_SUBSCRIPTION_PLANS)[number]
 const isValidSubscriptionPlan = (value: string): value is SubscriptionPlan =>
   (VALID_SUBSCRIPTION_PLANS as readonly string[]).includes(value)
 
+function verifyWebhookSignature(rawBody: string, signature: string, secret: string) {
+  const parts = signature.split(',').map((part) => part.trim().split('='))
+  const timestampText = parts.find(([key]) => key === 't')?.[1]
+  const timestamp = Number(timestampText)
+  const signatures = parts.filter(([key]) => key === 's').map(([, value]) => value)
+  const ageSeconds = Math.floor(Date.now() / 1000) - timestamp
+
+  if (!Number.isSafeInteger(timestamp) || ageSeconds < 0 || ageSeconds > 300 || signatures.length === 0) {
+    return false
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(`${timestamp}.${rawBody}`, 'utf8')
+    .digest('hex')
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+
+  return signatures.some((candidate) => {
+    if (!/^[\da-f]{64}$/i.test(candidate)) return false
+    const candidateBuffer = Buffer.from(candidate, 'hex')
+    return candidateBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(candidateBuffer, expectedBuffer)
+  })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text()
@@ -21,15 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing secret or signature' }, { status: 400 })
     }
 
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(rawBody)
-      .digest('hex')
-
-    const sigBuffer = Buffer.from(signature, 'utf8')
-    const expectedSigBuffer = Buffer.from(expectedSignature, 'utf8')
-
-    if (sigBuffer.length !== expectedSigBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedSigBuffer)) {
+    if (!verifyWebhookSignature(rawBody, signature, secret)) {
       console.error('Invalid FedaPay signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
@@ -212,9 +228,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 })
   } catch (err) {
-    // Retourne toujours un statut 200 en cas d'erreur de traitement interne
     console.error('FedaPay webhook internal error:', err)
-    return NextResponse.json({ received: true }, { status: 200 })
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }
 

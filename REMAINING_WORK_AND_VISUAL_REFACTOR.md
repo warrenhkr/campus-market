@@ -1,8 +1,8 @@
 # Remaining work & plan de refonte visuelle — Campus Market
 
-Date: 2026-08-19
+Date: 2026-09-27
 
-Mise a jour: 2026-08-27
+Mise a jour: 2026-09-27
 
 Ce document liste précisément les tâches restantes que tu as signalées (affichage de l'université, correction des selects, refonte visuelle finale), propose un plan d'action priorisé, indique les fichiers et composants à modifier, propose des tests associés et décrit comment préparer les commits/pushs des deux côtés.
 
@@ -156,16 +156,18 @@ Tu as mentionné "on push des deux côtés" — j'entends par là :
 ---
 
 9) Prochaine action que je peux faire maintenant
-- [x] Corriger le style des Selects sur le front et l'admin
-- [x] Afficher l'université sur Navbar, compte, fiche produit et page vendeur
-- [ ] Lancer les tests navigateur et la checklist FedaPay
+9) Mise à jour FedaPay — 2026-09-27
+
+- Le propriétaire confirme que le parcours de paiement sandbox a déjà fonctionné.
+- Le checkout et le webhook de l'application principale utilisent une configuration sandbox/live dynamique; le mode admin est persisté dans `settings.fedapay_mode`.
+- Le webhook vérifie la signature horodatée selon le SDK officiel FedaPay (HMAC-SHA256 de `timestamp.corps_brut`, tolérance 5 minutes). Les erreurs internes renvoient HTTP 500 pour permettre les nouvelles tentatives.
+- Le mode live ne peut être activé qu'avec `FEDAPAY_LIVE_SECRET_KEY`, `FEDAPAY_LIVE_WEBHOOK_SECRET` et une URL publique HTTPS définie par `NEXT_PUBLIC_APP_URL` ou `APP_URL`. La clé publique FedaPay n'est pas utilisée dans le checkout serveur.
+- L'admin séparé nécessite aussi `FEDAPAY_ENV=live` et `FEDAPAY_LIVE_SECRET_KEY` pour les payouts; il ne réutilise pas la clé sandbox en live.
+- À faire après configuration des secrets : enregistrer l'URL webhook live `https://<domaine-public>/api/webhook/fedapay`, activer `/admin/payments`, puis valider un vrai paiement et son webhook. Le live n'a pas été testé sans les identifiants de production.
 
 Etat des selects au 2026-08-27 : les composants Radix et les selects HTML natifs du front et de l'admin utilisent un fond opaque, un focus visible et un état ouvert lisible. Les tests visuels navigateur restent à effectuer.
 
-Dis-moi si tu veux que je commence par :
-A) afficher l'université partout (recommandé) — démarrage rapide
-B) corriger d'abord les selects (priorité UX sur formulaires)
-C) faire les deux en parallèle (je peux ouvrir deux branches et préparer commits)
+Le détail opérationnel et la checklist de validation FedaPay sont maintenus dans `DOCUMENTATION_TECHNIQUE.md` et `checklist_passation_campus_market.md`.
 
 ---
 

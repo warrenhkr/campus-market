@@ -48,10 +48,13 @@
 
 - [x] Le plan de finalisation est documenté dans SELLER_PAYMENT_AND_PREVIEW_PLAN.md.
 - [x] Les demandes de retrait vendeur, KYC et signalements sont déjà en place au niveau de base.
-- [x] Préparer le switch de paiement FedaPay live via un panneau admin sécurisé.
-- [x] Enregistrer le mode sandbox/live dans un config serveur ou en variables d'environnement et verrouiller le mode live derrière validation admin.
-- [x] Définir l’UX admin pour activer le live, stocker les clés et tester la configuration sans activer la production tant que la validation n’est pas faite.
-- [ ] Connecter le panneau live au stockage réel des clés si le projet passe en environnement multi-tenant / production.
+- [x] Le panneau `/admin/payments` persiste le mode dans `settings.fedapay_mode`; les clés restent dans les variables secrètes du déploiement, pas en base ni dans l'interface.
+- [x] Le live exige `FEDAPAY_LIVE_SECRET_KEY`, `FEDAPAY_LIVE_WEBHOOK_SECRET` et une URL publique HTTPS (`NEXT_PUBLIC_APP_URL` ou `APP_URL`). La clé publique n'est pas requise par le checkout serveur actuel.
+- [x] Le checkout bloque une configuration incomplète avant de créer la commande; l'admin payouts n'emploie plus la clé sandbox comme fallback live.
+- [x] La vérification du webhook suit le schéma officiel FedaPay `HMAC-SHA256(timestamp.corps_brut)` et les erreurs internes déclenchent une réponse 500 pour permettre les retries.
+- [x] Le propriétaire rapporte un test sandbox réussi.
+- [ ] Après ajout des secrets, enregistrer le webhook dans le compte live, activer le mode depuis `/admin/payments` et vérifier une transaction réelle de bout en bout.
+- [ ] Si les payouts vendeur doivent être live, configurer et tester aussi le projet `campus-market-admin` (`FEDAPAY_ENV=live`, `FEDAPAY_LIVE_SECRET_KEY`).
 
 ## 6) Affichage produit / preview vendeur
 
